@@ -10,6 +10,8 @@ use brush;
 use bounds;
 use mosaic;
 
+pub use self::TreeBody::*;
+
 #[derive(Debug)]
 /// A voxel octree; a voxel stored at a given level is the size of the entire subtree.
 pub struct T<Voxel> {
