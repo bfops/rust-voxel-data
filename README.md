@@ -1,7 +1,7 @@
 This library contains voxel storage modification code, meant to be reasonably performant and flexible. It's generic over the voxel type, with specific voxel 
 implementations in `src/impls`.
 
-It is by no means complete! Changes and additions are heartily encouraged, although some things (e.g. [mesh extraction](https://github.com/bfops/rust-dual-contouring))
+It is by no means complete! Changes and additions are heartily encouraged, although some things (e.g. [mesh extraction](https://github.com/bfops/rust-isosurface-extraction))
 might go better in separate libraries on top of this one.
 
 ## Sparse Voxel Octree
