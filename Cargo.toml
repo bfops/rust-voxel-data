@@ -1,0 +1,18 @@
+[package]
+
+name = "voxel"
+version = "0.0.0"
+authors = [
+  "Zeke Foppa <benjamin.foppa@gmail.com>",
+]
+
+[lib]
+name = "voxel"
+path = "./src/mod.rs"
+
+[dependencies]
+clippy = "*"
+log = "*"
+
+[dependencies.cgmath]
+git = "https://github.com/bjz/cgmath-rs"

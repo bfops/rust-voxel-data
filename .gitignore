@@ -1,0 +1,11 @@
+.DS_Store
+*~
+*#
+*.sw[a-z]
+*.old
+*.bak
+/doc/
+/target/
+/.rust/
+
+Cargo.lock
