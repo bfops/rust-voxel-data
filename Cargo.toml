@@ -1,13 +1,13 @@
 [package]
 
-name = "voxel"
+name = "voxel-data"
 version = "0.0.0"
 authors = [
   "Zeke Foppa <benjamin.foppa@gmail.com>",
 ]
 
 [lib]
-name = "voxel"
+name = "voxel_data"
 path = "./src/mod.rs"
 
 [dependencies]
