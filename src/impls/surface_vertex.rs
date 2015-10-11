@@ -47,9 +47,9 @@ pub struct SurfaceStruct<Material> {
 pub fn of_field<Material, Mosaic>(
   field: &Mosaic,
   voxel: &bounds::T,
-) -> T<Option<Mosaic::Material>> where
+) -> T<Option<Material>> where
   Material: Eq + Clone,
-  Mosaic: mosaic::T<Material = Material>,
+  Mosaic: mosaic::T<Material>,
 {
   let (low, high) = voxel.corners();
   macro_rules! material_at(($x:expr, $y:expr, $z:expr) => {{
@@ -146,14 +146,12 @@ pub fn unwrap<X>(voxel: T<Option<X>>) -> T<X> {
   }
 }
 
-impl<Material> ::T for T<Material> where Material: Eq + Clone {
-  type Material = Material;
-
+impl<Material> ::T<Material> for T<Material> where Material: Eq + Clone {
   fn brush<Mosaic>(
     this: &mut T<Material>,
     bounds: &bounds::T,
     brush: &brush::T<Mosaic>,
-  ) where Mosaic: mosaic::T<Material = Material>
+  ) where Mosaic: mosaic::T<Material>
   {
     let set_leaf = |this: &mut T<Material>, corner| {
       match of_field(&brush.mosaic, bounds) {

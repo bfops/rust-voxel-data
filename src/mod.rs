@@ -28,14 +28,11 @@ pub mod tree;
 pub mod impls;
 
 /// The interface provided by Voxels.
-pub trait T {
-  /// The type of material this voxel returns.
-  type Material;
-
+pub trait T<Material> {
   /// Apply a brush to this voxel.
   fn brush<Mosaic>(
     this: &mut Self,
     bounds: &bounds::T,
     brush: &brush::T<Mosaic>,
-  ) where Mosaic: mosaic::T<Material = Self::Material>;
+  ) where Mosaic: mosaic::T<Material>;
 }

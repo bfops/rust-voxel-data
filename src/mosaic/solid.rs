@@ -24,12 +24,10 @@ impl<Material, Field> field::T for T<Material, Field> where Field: field::T {
   }
 }
 
-impl<Material, Field> mosaic::T for T<Material, Field> where 
+impl<Material, Field> mosaic::T<Material> for T<Material, Field> where 
   Field: field::T,
   Material: Clone,
 {
-  type Material = Material;
-
   fn material(&self, p: &Point3<f32>) -> Option<Material> {
     if field::T::density(self, p) >= 0.0 {
       Some(self.material.clone())

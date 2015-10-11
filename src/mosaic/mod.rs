@@ -10,27 +10,22 @@ pub mod translation;
 use field;
 
 #[allow(missing_docs)]
-pub trait T: field::T {
-  #[allow(missing_docs)]
-  type Material;
-
+pub trait T<Material>: field::T {
   /// The material density at a given point. This should be nonnegative!
   fn density(&self, p: &Point3<f32>) -> f32 {
     field::T::density(self, p).abs()
   }
 
   /// The material at this point.
-  fn material(&self, p: &Point3<f32>) -> Option<Self::Material>;
+  fn material(&self, p: &Point3<f32>) -> Option<Material>;
 }
 
-impl<X: ?Sized> T for Box<X> where X: T {
-  type Material = X::Material;
-
+impl<X: ?Sized, Material> T<Material> for Box<X> where X: T<Material> {
   fn density(&self, p: &Point3<f32>) -> f32 {
     T::density(self.deref(), p)
   }
 
-  fn material(&self, p: &Point3<f32>) -> Option<X::Material> {
+  fn material(&self, p: &Point3<f32>) -> Option<Material> {
     T::material(self.deref(), p)
   }
 }

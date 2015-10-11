@@ -56,9 +56,7 @@ impl<Material> field::T for T<Material> {
   }
 }
 
-impl<Material> mosaic::T for T<Material> where Material: Eq + Clone {
-  type Material = Material;
-
+impl<Material> mosaic::T<Material> for T<Material> where Material: Eq + Clone {
   fn material(&self, p: &Point3<f32>) -> Option<Material> {
     assert!(!self.components.is_empty());
     let (_, material) =

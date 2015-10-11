@@ -133,13 +133,13 @@ impl<Voxel> TreeBody<Voxel> {
   }
 
   #[allow(missing_docs)]
-  pub fn brush<Mosaic>(
+  pub fn brush<Material, Mosaic>(
     &mut self,
     bounds: &bounds::T,
     brush: &brush::T<Mosaic>,
   ) where
-    Mosaic: mosaic::T,
-    Voxel: ::T<Material = Mosaic::Material>,
+    Mosaic: mosaic::T<Material>,
+    Voxel: ::T<Material>,
   {
     debug!("brush considers {:?}", bounds);
     if !brush_overlaps(bounds, &brush.bounds) {
@@ -476,12 +476,12 @@ impl<Voxel> T<Voxel> {
   }
 
   /// Apply a voxel brush to the contents of this tree.
-  pub fn brush<Mosaic>(
+  pub fn brush<Material, Mosaic>(
     &mut self,
     brush: &brush::T<Mosaic>,
   ) where
-    Mosaic: mosaic::T,
-    Voxel: ::T<Material = Mosaic::Material>,
+    Mosaic: mosaic::T<Material>,
+    Voxel: ::T<Material>,
   {
     macro_rules! recurse(($branch: ident, $x: expr, $y: expr, $z: expr) => {{
       self.contents.$branch.brush(
