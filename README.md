@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bfops/rust-voxel-data.svg?branch=master)](https://travis-ci.org/bfops/rust-voxel-data)
+
 This library contains voxel storage modification code, meant to be reasonably performant and flexible. It's generic over the voxel type, with specific voxel 
 implementations in `src/impls`.
 
