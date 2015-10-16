@@ -508,13 +508,16 @@ mod tests {
 
   use cgmath::{Ray3, Vector3, Point3};
 
-  use voxel;
   use super::{T, Branches, TreeBody};
+  use bounds;
+  use brush;
+  use field;
+  use mosaic;
 
   #[derive(Debug)]
   struct EraseAll;
 
-  impl voxel::field::T for EraseAll {
+  impl field::T for EraseAll {
     fn density(&self, _: &Point3<f32>) -> f32 {
       1.0
     }
@@ -524,18 +527,18 @@ mod tests {
     }
   }
 
-  impl mosaic::T for EraseAll {
-    fn material(&self, _: &Point3<f32>) -> Option<voxel::Material> {
+  impl mosaic::T<()> for EraseAll {
+    fn material(&self, _: &Point3<f32>) -> Option<()> {
       None
     }
   }
 
-  impl ::T for i32 {
+  impl ::T<()> for i32 {
     fn brush<Mosaic>(
       this: &mut Self,
       _: &bounds::T,
       _: &brush::T<Mosaic>,
-    ) where Mosaic: ::mosaic::T
+    ) where Mosaic: mosaic::T<()>
     {
       *this = 999;
     }
