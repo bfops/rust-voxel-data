@@ -1,14 +1,12 @@
 //! Voxel octree
 
-use cgmath::{Aabb, Point, Vector, Vector3, Ray3};
+use cgmath::{Point, Ray3};
 use std::mem;
 use std::ops::{Deref, DerefMut};
 
 mod raycast;
 
-use brush;
 use bounds;
-use mosaic;
 
 pub use self::TreeBody::*;
 
@@ -81,101 +79,12 @@ impl<Voxel> Branches<Voxel> {
   }
 }
 
-fn brush_overlaps(voxel: &bounds::T, brush: &brush::Bounds) -> bool {
-  if voxel.lg_size >= 0 {
-    let min =
-      Vector3::new(
-        voxel.x << voxel.lg_size,
-        voxel.y << voxel.lg_size,
-        voxel.z << voxel.lg_size,
-      );
-    min.x < brush.max().x &&
-    min.y < brush.max().y &&
-    min.z < brush.max().z &&
-    {
-      let max = min.add_s(1 << voxel.lg_size);
-      brush.min().x < max.x &&
-      brush.min().y < max.y &&
-      brush.min().z < max.z &&
-      true
-    }
-  } else {
-    let lg_size = -voxel.lg_size;
-    let max =
-      Vector3::new(
-        brush.max().x << lg_size,
-        brush.max().y << lg_size,
-        brush.max().z << lg_size,
-      );
-    voxel.x < max.x &&
-    voxel.y < max.y &&
-    voxel.z < max.z &&
-    {
-      let min =
-        Vector3::new(
-          brush.min().x << lg_size,
-          brush.min().y << lg_size,
-          brush.min().z << lg_size,
-        );
-      min.x <= voxel.x &&
-      min.y <= voxel.y &&
-      min.z <= voxel.z &&
-      true
-    }
-  }
-}
-
 impl<Voxel> TreeBody<Voxel> {
   /// Create a tree leaf.
   pub fn leaf(voxel: Option<Voxel>) -> TreeBody<Voxel> {
     TreeBody::Branch {
       data: voxel,
       branches: Box::new(Branches::empty()),
-    }
-  }
-
-  #[allow(missing_docs)]
-  pub fn brush<Material, Mosaic>(
-    &mut self,
-    bounds: &bounds::T,
-    brush: &brush::T<Mosaic>,
-  ) where
-    Mosaic: mosaic::T<Material>,
-    Voxel: ::T<Material>,
-  {
-    debug!("brush considers {:?}", bounds);
-    if !brush_overlaps(bounds, &brush.bounds) {
-      debug!("ignoring {:?}", bounds);
-      return
-    }
-
-    match self {
-      &mut TreeBody::Branch { ref mut data, ref mut branches } => {
-        match data {
-          &mut None => {},
-          &mut Some(ref mut voxel) => {
-            ::T::brush(voxel, bounds, brush);
-          },
-        }
-
-        // Bounds of the lowest branch
-        let bounds = bounds::new(bounds.x << 1, bounds.y << 1, bounds.z << 1, bounds.lg_size - 1);
-
-        macro_rules! recurse(($branch: ident, $update_bounds: expr) => {{
-          let mut bounds = bounds;
-          $update_bounds(&mut bounds);
-          branches.$branch.brush(&bounds, brush);
-        }});
-        recurse!(lll, |_|                     {                            });
-        recurse!(llh, |b: &mut bounds::T| {                    b.z += 1});
-        recurse!(lhl, |b: &mut bounds::T| {          b.y += 1          });
-        recurse!(lhh, |b: &mut bounds::T| {          b.y += 1; b.z += 1});
-        recurse!(hll, |b: &mut bounds::T| {b.x += 1                    });
-        recurse!(hlh, |b: &mut bounds::T| {b.x += 1;           b.z += 1});
-        recurse!(hhl, |b: &mut bounds::T| {b.x += 1; b.y += 1});
-        recurse!(hhh, |b: &mut bounds::T| {b.x += 1; b.y += 1; b.z += 1});
-      },
-      &mut TreeBody::Empty => {},
     }
   }
 }
@@ -476,30 +385,6 @@ impl<Voxel> T<Voxel> {
       Err(_) => None,
     }
   }
-
-  /// Apply a voxel brush to the contents of this tree.
-  pub fn brush<Material, Mosaic>(
-    &mut self,
-    brush: &brush::T<Mosaic>,
-  ) where
-    Mosaic: mosaic::T<Material>,
-    Voxel: ::T<Material>,
-  {
-    macro_rules! recurse(($branch: ident, $x: expr, $y: expr, $z: expr) => {{
-      self.contents.$branch.brush(
-        &bounds::new($x, $y, $z, self.lg_size as i16),
-        brush,
-      );
-    }});
-    recurse!(lll, -1, -1, -1);
-    recurse!(llh, -1, -1,  0);
-    recurse!(lhl, -1,  0, -1);
-    recurse!(lhh, -1,  0,  0);
-    recurse!(hll,  0, -1, -1);
-    recurse!(hlh,  0, -1,  0);
-    recurse!(hhl,  0,  0, -1);
-    recurse!(hhh,  0,  0,  0);
-  }
 }
 
 #[cfg(test)]
@@ -510,39 +395,6 @@ mod tests {
 
   use super::{T, Branches, TreeBody};
   use bounds;
-  use brush;
-  use field;
-  use mosaic;
-
-  #[derive(Debug)]
-  struct EraseAll;
-
-  impl field::T for EraseAll {
-    fn density(&self, _: &Point3<f32>) -> f32 {
-      1.0
-    }
-
-    fn normal(&self, _: &Point3<f32>) -> Vector3<f32> {
-      Vector3::new(0.0, 0.0, 0.0)
-    }
-  }
-
-  impl mosaic::T<()> for EraseAll {
-    fn material(&self, _: &Point3<f32>) -> Option<()> {
-      None
-    }
-  }
-
-  impl ::T<()> for i32 {
-    fn brush<Mosaic>(
-      this: &mut Self,
-      _: &bounds::T,
-      _: &brush::T<Mosaic>,
-    ) where Mosaic: mosaic::T<()>
-    {
-      *this = 999;
-    }
-  }
 
   #[test]
   fn simple_lookup() {
@@ -620,25 +472,6 @@ mod tests {
     );
 
     assert_eq!(actual, Some((bounds::new(4, 4, 4, 0), &2)));
-  }
-
-  #[test]
-  fn simple_remove() {
-    let mut tree: T<i32> = T::new();
-    *tree.get_mut_or_create(&bounds::new(9, -1, 3, 0)) = TreeBody::leaf(Some(1));
-
-    tree.brush(
-      &brush::T {
-        mosaic: EraseAll,
-        bounds: 
-        brush::Bounds::new(
-          Point3::new(9, -1, 3),
-          Point3::new(10, 0, 4),
-        ),
-      },
-    );
-
-    assert_eq!(tree.get(&bounds::new(9, -1, 3, 0)), Some(&999));
   }
 
   #[bench]

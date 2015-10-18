@@ -2,13 +2,9 @@
 
 use cgmath::{Point, Point3, Vector, EuclideanVector, Vector3};
 use std::cmp::{min, max};
-use std::f32;
 use std::ops::Neg;
 
 use bounds;
-use brush;
-use field;
-use mosaic;
 
 // NOTE: When voxel size and storage become an issue, this should be shrunk to
 // be less than pointer-sized. It'll be easier to transfer to the GPU for
@@ -41,97 +37,6 @@ pub struct SurfaceStruct<Material> {
   pub corner: Material,
 }
 
-#[allow(eq_op)]
-/// Create a voxel by sampling a field.
-// TODO: Should this be moved into the general voxel interface?
-pub fn of_field<Material, Mosaic>(
-  field: &Mosaic,
-  voxel: &bounds::T,
-) -> T<Option<Material>> where
-  Material: Eq + Clone,
-  Mosaic: mosaic::T<Material>,
-{
-  let (low, high) = voxel.corners();
-  macro_rules! material_at(($x:expr, $y:expr, $z:expr) => {{
-    let p = Point3::new($x.x, $y.y, $z.z);
-    debug!("Finding material at {:?}", p);
-    mosaic::T::material(field, &p)
-  }});
-
-  // TODO: Re=evaluating the density function is costly. Do it only once for each corner.
-
-  let corner = material_at!(low, low, low);
-  let is_homogenous = || {
-    macro_rules! check_corner(($x:expr, $y:expr, $z:expr) => {{
-      let material = material_at!($x, $y, $z);
-      if material != corner {
-        return false
-      }
-    }});
-    check_corner!( low,  low, high);
-    check_corner!( low, high,  low);
-    check_corner!( low, high, high);
-    check_corner!(high,  low,  low);
-    check_corner!(high,  low, high);
-    check_corner!(high, high,  low);
-    check_corner!(high, high, high);
-    true
-  };
-  let is_homogenous = is_homogenous();
-  debug!("is_homogenous: {:?}", is_homogenous);
-
-  if is_homogenous {
-    return T::Volume(corner.clone())
-  }
-
-  let corner_coords = [0.0, 256.0];
-  let mut total_weight = 0.0;
-
-  macro_rules! weighted(($x:expr, $y:expr, $z:expr) => {{
-    let x = if $x == 0 { low.x } else { high.x };
-    let y = if $y == 0 { low.y } else { high.y };
-    let z = if $z == 0 { low.z } else { high.z };
-    let corner = mosaic::T::density(field, &Point3::new(x, y, z));
-    assert!(corner >= 0.0);
-    let corner = 1.0 / (corner + f32::EPSILON);
-    total_weight += corner;
-    Vector3::new(corner_coords[$x], corner_coords[$y], corner_coords[$z]).mul_s(corner)
-  }});
-
-  let vertex = 
-    Vector3::new(0.0, 0.0, 0.0)
-    .add_v(&weighted!(0, 0, 0))
-    .add_v(&weighted!(0, 0, 1))
-    .add_v(&weighted!(0, 1, 0))
-    .add_v(&weighted!(0, 1, 1))
-    .add_v(&weighted!(1, 0, 0))
-    .add_v(&weighted!(1, 0, 1))
-    .add_v(&weighted!(1, 1, 0))
-    .add_v(&weighted!(1, 1, 1))
-  ;
-
-  let vertex = Point3::from_vec(&vertex.div_s(total_weight));
-  let vertex =
-    Vertex {
-      x: Fracu8::of(f32::min(vertex.x, 255.0) as u8),
-      y: Fracu8::of(f32::min(vertex.y, 255.0) as u8),
-      z: Fracu8::of(f32::min(vertex.z, 255.0) as u8),
-    };
-
-  let normal;
-  {
-    // Okay, this is silly to have right after we construct the vertex.
-    let vertex = vertex.to_world_vertex(voxel);
-    normal = Normal::of_float_normal(&field::T::normal(field, &vertex));
-  }
-
-  T::Surface(SurfaceStruct {
-    surface_vertex: vertex,
-    normal: normal,
-    corner: corner.clone(),
-  })
-}
-
 #[allow(missing_docs)]
 pub fn unwrap<X>(voxel: T<Option<X>>) -> T<X> {
   match voxel {
@@ -142,50 +47,6 @@ pub fn unwrap<X>(voxel: T<Option<X>>) -> T<X> {
         normal: x.normal,
         corner: x.corner.unwrap(),
       })
-    }
-  }
-}
-
-impl<Material> ::T<Material> for T<Material> where Material: Eq + Clone {
-  fn brush<Mosaic>(
-    this: &mut T<Material>,
-    bounds: &bounds::T,
-    brush: &brush::T<Mosaic>,
-  ) where Mosaic: mosaic::T<Material>
-  {
-    let set_leaf = |this: &mut T<Material>, corner| {
-      match of_field(&brush.mosaic, bounds) {
-        T::Volume(None) => {}
-        T::Volume(Some(material)) => {
-          *this = T::Volume(material);
-        },
-        T::Surface(surface) => {
-          let size = bounds.size();
-          let low = Point3::new(bounds.x as f32, bounds.y as f32, bounds.z as f32);
-          let low = low.mul_s(size);
-          let corner =
-            match mosaic::T::material(&brush.mosaic, &low) {
-              None => corner,
-              Some(material) => material,
-            };
-          let voxel =
-            SurfaceStruct {
-              surface_vertex: surface.surface_vertex,
-              normal: surface.normal,
-              corner: corner,
-            };
-          *this = T::Surface(voxel);
-        },
-      }
-    };
-
-    match this.clone() {
-      T::Volume(ref material) => {
-        set_leaf(this, material.clone());
-      },
-      T::Surface(ref voxel) => {
-        set_leaf(this, voxel.corner.clone());
-      },
     }
   }
 }
