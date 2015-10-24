@@ -56,7 +56,7 @@ impl T {
   }
 
   /// Check whether this voxel contains a given point.
-  pub fn contains(&self, p: &Point3<f32>) -> bool {
+  pub fn contains_point(&self, p: &Point3<f32>) -> bool {
     let (low, high) = self.corners();
     p.x >= low.x &&
     p.y >= low.y &&
@@ -64,6 +64,21 @@ impl T {
     p.x < high.x &&
     p.y < high.y &&
     p.z < high.z &&
+    true
+  }
+
+  /// Check whether this voxel contains another one
+  pub fn contains(&self, other: &T) -> bool {
+    if other.lg_size > self.lg_size {
+      return false
+    }
+
+    // Convert `other`'s coordinates to be in terms of `self`'s lg_size.
+    // This rounds down, so any voxels inside `self` will end up equal to self.
+    let lg_ratio = self.lg_size - other.lg_size;
+    (other.x >> lg_ratio) == self.x &&
+    (other.y >> lg_ratio) == self.y &&
+    (other.z >> lg_ratio) == self.z &&
     true
   }
 }
