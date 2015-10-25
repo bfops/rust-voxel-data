@@ -13,6 +13,7 @@ path = "./src/mod.rs"
 [dependencies]
 clippy = "*"
 log = "*"
+rustc-serialize = "*"
 
 [dependencies.cgmath]
 git = "https://github.com/bjz/cgmath-rs"
