@@ -135,13 +135,17 @@ impl<Voxel> TreeBody<Voxel> {
   }
 
   #[allow(missing_docs)]
-  pub fn brush<Material, Mosaic>(
+  pub fn brush<Material, Mosaic, Generate, OnVoxelUpdate>(
     &mut self,
     bounds: &bounds::T,
     brush: &brush::T<Mosaic>,
+    generate: &mut Generate,
+    on_voxel_update: &mut OnVoxelUpdate,
   ) where
     Mosaic: mosaic::T<Material>,
     Voxel: ::T<Material>,
+    Generate: FnMut(&::bounds::T) -> Option<Voxel>,
+    OnVoxelUpdate: FnMut(&Voxel, &::bounds::T),
   {
     debug!("brush considers {:?}", bounds);
     if !brush_overlaps(bounds, &brush.bounds) {
@@ -149,33 +153,52 @@ impl<Voxel> TreeBody<Voxel> {
       return
     }
 
+    let mut on_branches = |data: &mut Option<Voxel>, branches: &mut Box<Branches<Voxel>>| {
+      match data {
+        &mut None => {
+          match generate(bounds) {
+            None => {},
+            Some(mut voxel) => {
+              ::T::brush(&mut voxel, bounds, brush);
+              on_voxel_update(&voxel, bounds);
+              *data = Some(voxel);
+            },
+          }
+        },
+        &mut Some(ref mut voxel) => {
+          ::T::brush(voxel, bounds, brush);
+          on_voxel_update(&voxel, bounds);
+        },
+      }
+
+      // Bounds of the lowest branch
+      let bounds = bounds::new(bounds.x << 1, bounds.y << 1, bounds.z << 1, bounds.lg_size - 1);
+
+      macro_rules! recurse(($branch: ident, $update_bounds: expr) => {{
+        let mut bounds = bounds;
+        $update_bounds(&mut bounds);
+        branches.$branch.brush(&bounds, brush, generate, on_voxel_update);
+      }});
+      recurse!(lll, |_|                     {                            });
+      recurse!(llh, |b: &mut bounds::T| {                    b.z += 1});
+      recurse!(lhl, |b: &mut bounds::T| {          b.y += 1          });
+      recurse!(lhh, |b: &mut bounds::T| {          b.y += 1; b.z += 1});
+      recurse!(hll, |b: &mut bounds::T| {b.x += 1                    });
+      recurse!(hlh, |b: &mut bounds::T| {b.x += 1;           b.z += 1});
+      recurse!(hhl, |b: &mut bounds::T| {b.x += 1; b.y += 1});
+      recurse!(hhh, |b: &mut bounds::T| {b.x += 1; b.y += 1; b.z += 1});
+    };
+
     match self {
       &mut TreeBody::Branch { ref mut data, ref mut branches } => {
-        match data {
-          &mut None => {},
-          &mut Some(ref mut voxel) => {
-            ::T::brush(voxel, bounds, brush);
-          },
-        }
-
-        // Bounds of the lowest branch
-        let bounds = bounds::new(bounds.x << 1, bounds.y << 1, bounds.z << 1, bounds.lg_size - 1);
-
-        macro_rules! recurse(($branch: ident, $update_bounds: expr) => {{
-          let mut bounds = bounds;
-          $update_bounds(&mut bounds);
-          branches.$branch.brush(&bounds, brush);
-        }});
-        recurse!(lll, |_|                     {                            });
-        recurse!(llh, |b: &mut bounds::T| {                    b.z += 1});
-        recurse!(lhl, |b: &mut bounds::T| {          b.y += 1          });
-        recurse!(lhh, |b: &mut bounds::T| {          b.y += 1; b.z += 1});
-        recurse!(hll, |b: &mut bounds::T| {b.x += 1                    });
-        recurse!(hlh, |b: &mut bounds::T| {b.x += 1;           b.z += 1});
-        recurse!(hhl, |b: &mut bounds::T| {b.x += 1; b.y += 1});
-        recurse!(hhh, |b: &mut bounds::T| {b.x += 1; b.y += 1; b.z += 1});
+        on_branches(data, branches);
       },
-      &mut TreeBody::Empty => {},
+      &mut TreeBody::Empty => {
+        let mut data = None;
+        let mut branches = Box::new(Branches::empty());
+        on_branches(&mut data, &mut branches);
+        *self = TreeBody::Branch { data: data, branches: branches };
+      },
     }
   }
 }
@@ -478,17 +501,23 @@ impl<Voxel> T<Voxel> {
   }
 
   /// Apply a voxel brush to the contents of this tree.
-  pub fn brush<Material, Mosaic>(
+  pub fn brush<Material, Mosaic, Generate, OnVoxelUpdate>(
     &mut self,
     brush: &brush::T<Mosaic>,
+    generate: &mut Generate,
+    on_voxel_update: &mut OnVoxelUpdate,
   ) where
     Mosaic: mosaic::T<Material>,
     Voxel: ::T<Material>,
+    Generate: FnMut(&::bounds::T) -> Option<Voxel>,
+    OnVoxelUpdate: FnMut(&Voxel, &::bounds::T),
   {
     macro_rules! recurse(($branch: ident, $x: expr, $y: expr, $z: expr) => {{
       self.contents.$branch.brush(
         &bounds::new($x, $y, $z, self.lg_size as i16),
         brush,
+        generate,
+        on_voxel_update
       );
     }});
     recurse!(lll, -1, -1, -1);
