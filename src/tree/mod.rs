@@ -125,6 +125,16 @@ fn brush_overlaps(voxel: &bounds::T, brush: &brush::Bounds) -> bool {
   }
 }
 
+/// The result of a voxel generation request.
+pub enum GenerateResult<Voxel> {
+  /// No voxel generated
+  None,
+  /// No voxel generated, and none smaller than this will be generated.
+  TooSmall,
+  #[allow(missing_docs)]
+  Ok(Voxel),
+}
+
 impl<Voxel> TreeBody<Voxel> {
   /// Create a tree leaf.
   pub fn leaf(voxel: Option<Voxel>) -> TreeBody<Voxel> {
@@ -144,7 +154,7 @@ impl<Voxel> TreeBody<Voxel> {
   ) where
     Mosaic: mosaic::T<Material>,
     Voxel: ::T<Material>,
-    Generate: FnMut(&::bounds::T) -> Option<Voxel>,
+    Generate: FnMut(&::bounds::T) -> GenerateResult<Voxel>,
     OnVoxelUpdate: FnMut(&Voxel, &::bounds::T),
   {
     debug!("brush considers {:?}", bounds);
@@ -157,8 +167,9 @@ impl<Voxel> TreeBody<Voxel> {
       match data {
         &mut None => {
           match generate(bounds) {
-            None => {},
-            Some(mut voxel) => {
+            GenerateResult::None => {},
+            GenerateResult::TooSmall => return,
+            GenerateResult::Ok(mut voxel) => {
               ::T::brush(&mut voxel, bounds, brush);
               on_voxel_update(&voxel, bounds);
               *data = Some(voxel);
@@ -509,7 +520,7 @@ impl<Voxel> T<Voxel> {
   ) where
     Mosaic: mosaic::T<Material>,
     Voxel: ::T<Material>,
-    Generate: FnMut(&::bounds::T) -> Option<Voxel>,
+    Generate: FnMut(&::bounds::T) -> GenerateResult<Voxel>,
     OnVoxelUpdate: FnMut(&Voxel, &::bounds::T),
   {
     macro_rules! recurse(($branch: ident, $x: expr, $y: expr, $z: expr) => {{
@@ -537,7 +548,7 @@ mod tests {
 
   use cgmath::{Ray3, Vector3, Point3};
 
-  use super::{T, Branches, TreeBody};
+  use super::{T, Branches, TreeBody, GenerateResult};
   use bounds;
   use brush;
   use field;
@@ -665,6 +676,14 @@ mod tests {
           Point3::new(10, 0, 4),
         ),
       },
+      &mut |bounds| {
+        if bounds.lg_size < 0 {
+          GenerateResult::TooSmall
+        } else {
+          GenerateResult::None
+        }
+      },
+      &mut |_, _| {},
     );
 
     assert_eq!(tree.get(&bounds::new(9, -1, 3, 0)), Some(&999));
