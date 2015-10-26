@@ -12,6 +12,8 @@ pub struct T<Mosaic> {
   pub bounds: Bounds,
   /// The mosaic that this brush will apply.
   pub mosaic: Mosaic,
+  /// lg of the smallest voxel size this brush will touch.
+  pub min_lg_size: i16,
 }
 
 unsafe impl<Mosaic> Send for T<Mosaic> {}

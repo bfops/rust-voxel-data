@@ -125,16 +125,6 @@ fn brush_overlaps(voxel: &bounds::T, brush: &brush::Bounds) -> bool {
   }
 }
 
-/// The result of a voxel generation request.
-pub enum GenerateResult<Voxel> {
-  /// No voxel generated
-  None,
-  /// No voxel generated, and none smaller than this will be generated.
-  TooSmall,
-  #[allow(missing_docs)]
-  Ok(Voxel),
-}
-
 impl<Voxel> TreeBody<Voxel> {
   /// Create a tree leaf.
   pub fn leaf(voxel: Option<Voxel>) -> TreeBody<Voxel> {
@@ -154,7 +144,7 @@ impl<Voxel> TreeBody<Voxel> {
   ) where
     Mosaic: mosaic::T<Material>,
     Voxel: ::T<Material>,
-    Generate: FnMut(&::bounds::T) -> GenerateResult<Voxel>,
+    Generate: FnMut(&::bounds::T) -> Option<Voxel>,
     OnVoxelUpdate: FnMut(&Voxel, &::bounds::T),
   {
     debug!("brush considers {:?}", bounds);
@@ -163,13 +153,16 @@ impl<Voxel> TreeBody<Voxel> {
       return
     }
 
+    if bounds.lg_size < brush.min_lg_size {
+      return
+    }
+
     let mut on_branches = |data: &mut Option<Voxel>, branches: &mut Box<Branches<Voxel>>| {
       match data {
         &mut None => {
           match generate(bounds) {
-            GenerateResult::None => {},
-            GenerateResult::TooSmall => return,
-            GenerateResult::Ok(mut voxel) => {
+            None => {},
+            Some(mut voxel) => {
               ::T::brush(&mut voxel, bounds, brush);
               on_voxel_update(&voxel, bounds);
               *data = Some(voxel);
@@ -520,7 +513,7 @@ impl<Voxel> T<Voxel> {
   ) where
     Mosaic: mosaic::T<Material>,
     Voxel: ::T<Material>,
-    Generate: FnMut(&::bounds::T) -> GenerateResult<Voxel>,
+    Generate: FnMut(&::bounds::T) -> Option<Voxel>,
     OnVoxelUpdate: FnMut(&Voxel, &::bounds::T),
   {
     macro_rules! recurse(($branch: ident, $x: expr, $y: expr, $z: expr) => {{
@@ -548,7 +541,7 @@ mod tests {
 
   use cgmath::{Ray3, Vector3, Point3};
 
-  use super::{T, Branches, TreeBody, GenerateResult};
+  use super::{T, Branches, TreeBody};
   use bounds;
   use brush;
   use field;
@@ -671,18 +664,13 @@ mod tests {
       &brush::T {
         mosaic: EraseAll,
         bounds: 
-        brush::Bounds::new(
-          Point3::new(9, -1, 3),
-          Point3::new(10, 0, 4),
-        ),
+          brush::Bounds::new(
+            Point3::new(9, -1, 3),
+            Point3::new(10, 0, 4),
+          ),
+        min_lg_size: 0,
       },
-      &mut |bounds| {
-        if bounds.lg_size < 0 {
-          GenerateResult::TooSmall
-        } else {
-          GenerateResult::None
-        }
-      },
+      &mut |_| None,
       &mut |_, _| {},
     );
 
