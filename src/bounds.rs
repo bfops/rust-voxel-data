@@ -2,7 +2,7 @@
 
 use cgmath::{Point, Point3, Vector3};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, RustcEncodable, RustcDecodable)]
 #[allow(missing_docs)]
 /// The input coordinates should be divided by (2^lg_size) relative to world coords.
 pub struct T {
