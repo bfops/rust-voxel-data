@@ -11,9 +11,7 @@ name = "voxel_data"
 path = "./src/mod.rs"
 
 [dependencies]
+cgmath = "0.3.1"
 clippy = "*"
 log = "*"
 rustc-serialize = "*"
-
-[dependencies.cgmath]
-git = "https://github.com/bjz/cgmath-rs"
