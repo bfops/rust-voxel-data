@@ -183,7 +183,7 @@ impl<Voxel> TreeBody<Voxel> {
         $update_bounds(&mut bounds);
         branches.$branch.brush(&bounds, brush, generate, on_voxel_update);
       }});
-      recurse!(lll, |_|                     {                            });
+      recurse!(lll, |_|                 {                            });
       recurse!(llh, |b: &mut bounds::T| {                    b.z += 1});
       recurse!(lhl, |b: &mut bounds::T| {          b.y += 1          });
       recurse!(lhh, |b: &mut bounds::T| {          b.y += 1; b.z += 1});
@@ -663,7 +663,7 @@ mod tests {
     tree.brush(
       &brush::T {
         mosaic: EraseAll,
-        bounds: 
+        bounds:
           brush::Bounds::new(
             Point3::new(9, -1, 3),
             Point3::new(10, 0, 4),
