@@ -18,6 +18,7 @@ pub struct T {
 }
 
 impl Hash for T {
+  #[inline]
   fn hash<H: Hasher>(&self, state: &mut H) {
     unsafe {
       let p: *const u8 = mem::transmute(self);
@@ -27,6 +28,7 @@ impl Hash for T {
 }
 
 #[allow(missing_docs)]
+#[inline]
 pub fn new(x: i32, y: i32, z: i32, lg_size: i16) -> T {
   let ret =
     T {
@@ -40,6 +42,7 @@ pub fn new(x: i32, y: i32, z: i32, lg_size: i16) -> T {
 
 impl T {
   /// The width of this voxel.
+  #[inline]
   pub fn size(&self) -> f32 {
     if self.lg_size >= 0 {
       (1 << self.lg_size) as f32
@@ -49,12 +52,14 @@ impl T {
   }
 
   /// The bottom of this voxel.
+  #[inline]
   pub fn low_corner(&self) -> Point3<f32> {
     let size = self.size();
     Point3::new(self.x as f32, self.y as f32, self.z as f32).mul_s(size)
   }
 
   /// The corners of this voxel.
+  #[inline]
   pub fn corners(&self) -> (Point3<f32>, Point3<f32>) {
     let size = self.size();
     let low = Point3::new(self.x as f32, self.y as f32, self.z as f32).mul_s(size);
@@ -62,6 +67,7 @@ impl T {
   }
 
   /// The center of this voxel.
+  #[inline]
   pub fn center(&self) -> Point3<f32> {
     let size = self.size();
     let half = Vector3::new(0.5, 0.5, 0.5);
@@ -69,6 +75,7 @@ impl T {
   }
 
   /// Check whether this voxel contains a given point.
+  #[inline]
   pub fn contains_point(&self, p: &Point3<f32>) -> bool {
     let (low, high) = self.corners();
     p.x >= low.x &&
@@ -81,6 +88,7 @@ impl T {
   }
 
   /// Check whether this voxel contains another one
+  #[inline]
   pub fn contains(&self, other: &T) -> bool {
     if other.lg_size > self.lg_size {
       return false
