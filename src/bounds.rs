@@ -1,12 +1,8 @@
 //! Voxel bounds
 
-use std::hash::{Hash, Hasher};
-use std::mem;
-use std::slice;
-
 use cgmath::{Point, Point3, Vector3};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, RustcEncodable, RustcDecodable)]
 #[allow(missing_docs)]
 /// The input coordinates should be divided by (2^lg_size) relative to world coords.
 pub struct T {
@@ -15,16 +11,6 @@ pub struct T {
   pub z: i32,
   /// The log_2 of the voxel's size.
   pub lg_size: i16,
-}
-
-impl Hash for T {
-  #[inline]
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    unsafe {
-      let p: *const u8 = mem::transmute(self);
-      state.write(slice::from_raw_parts(p, mem::size_of::<T>()))
-    }
-  }
 }
 
 #[allow(missing_docs)]
