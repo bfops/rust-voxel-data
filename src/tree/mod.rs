@@ -399,6 +399,7 @@ impl<Voxel> T<Voxel> {
 
   /// Find a voxel inside this tree.
   /// If it doesn't exist, it will be created as empty.
+  #[inline(never)]
   pub fn get_mut_or_create<'a>(&'a mut self, voxel: &bounds::T) -> &'a mut TreeBody<Voxel> {
     self.grow_to_hold(voxel);
     let branch: Result<_, ()> =
