@@ -182,13 +182,13 @@ pub fn cast_ray<'a, Voxel, Act, R>(
         sides.iter()
         .enumerate()
         .filter_map(next_toi)
-        .min_by(|&exit| exit.toi).unwrap(),
+        .min_by_key(|&exit| exit.toi).unwrap(),
       Some(entry) =>
         sides.iter()
         .enumerate()
         .filter(|&(i, _)| i != entry.side)
         .filter_map(next_toi)
-        .min_by(|&exit| exit.toi).unwrap(),
+        .min_by_key(|&exit| exit.toi).unwrap(),
     };
   Err(exit)
 }

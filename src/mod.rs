@@ -3,10 +3,12 @@
 #![allow(let_and_return)]
 #![allow(match_ref_pats)]
 #![allow(type_complexity)]
+#![allow(unneeded_field_pattern)]
+#![allow(cyclomatic_complexity)]
+#![allow(option_map_unwrap_or)]
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-#![feature(iter_cmp)]
 #![feature(main)]
 #![feature(plugin)]
 #![feature(test)]
