@@ -25,7 +25,7 @@ pub struct T<Voxel> {
 #[allow(missing_docs)]
 #[repr(C)]
 pub struct Branches<Voxel> {
-  data: Option<Voxel>,
+  pub data: Option<Voxel>,
 
   // xyz ordering
   // This isn't an array because we can't move out of an array.
@@ -143,6 +143,22 @@ impl<Voxel> Inner<Voxel> {
     let mut branches = Branches::empty();
     branches.data = voxel;
     Inner::Branches(Box::new(branches))
+  }
+
+  /// Return the `Branches` data from this subtree. If none exists, create empty branch data.
+  pub fn force_branches(&mut self) -> &mut Branches<Voxel> {
+    match self {
+      &mut Inner::Branches(ref mut branches) => branches,
+
+      &mut Inner::Empty => {
+        *self = Self::leaf(None);
+
+        match self {
+          &mut Inner::Branches(ref mut branches) => branches,
+          _ => unreachable!(),
+        }
+      },
+    }
   }
 
   #[allow(missing_docs)]
@@ -420,28 +436,8 @@ impl<Voxel> T<Voxel> {
   pub fn get_mut_or_create<'a>(&'a mut self, voxel: &bounds::T) -> &'a mut Inner<Voxel> {
     self.grow_to_hold(voxel);
     let branch: Result<_, ()> =
-      self.find_mut(voxel, |branch| { Ok(T::<Voxel>::get_mut_or_create_step(branch)) });
+      self.find_mut(voxel, |branch| { Ok(Inner::<Voxel>::force_branches(branch)) });
     branch.unwrap()
-  }
-
-  fn get_mut_or_create_step(
-    branch: &mut Inner<Voxel>,
-  ) -> &mut Branches<Voxel> {
-    // "Step down" the tree.
-    match *branch {
-      // Branches: we can go straight to the branching logic.
-      Inner::Branches(ref mut branches) => branches,
-
-      Inner::Empty => {
-        // Replace this branch with 8 empty sub-branches - who's gonna notice?
-        *branch = Inner::leaf(None);
-
-        match *branch {
-          Inner::Branches(ref mut branches) => branches,
-          _ => unreachable!(),
-        }
-      },
-    }
   }
 
   /// Find a voxel inside this tree.
