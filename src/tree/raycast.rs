@@ -2,7 +2,7 @@ use cgmath::{Point, Vector, Ray3};
 use std::cmp::Ordering;
 
 use bounds;
-use tree::{TreeBody, Branches};
+use tree;
 
 // Time-of-intersection. Implements `Ord` for sanity reasons;
 // let's hope the floating-points are all valid.
@@ -53,7 +53,7 @@ pub struct Exit {
 
 #[inline]
 pub fn cast_ray_branches<'a, Voxel, MakeBounds, Act, R>(
-  this: &'a Branches<Voxel>,
+  this: &'a tree::Branches<Voxel>,
   ray: &Ray3<f32>,
   mut entry: Option<Entry>,
   mut coords: [usize; 3],
@@ -91,7 +91,7 @@ pub fn cast_ray_branches<'a, Voxel, MakeBounds, Act, R>(
 
 /// Precondition: the ray passes through `this`.
 pub fn cast_ray<'a, Voxel, Act, R>(
-  this: &'a TreeBody<Voxel>,
+  this: &'a tree::Inner<Voxel>,
   ray: &Ray3<f32>,
   bounds: bounds::T,
   entry: Option<Entry>,
@@ -101,17 +101,17 @@ pub fn cast_ray<'a, Voxel, Act, R>(
     Act: FnMut(bounds::T, &'a Voxel) -> Option<R>
 {
   match this {
-    &TreeBody::Empty => {
+    &tree::Inner::Empty => {
       // We pass through empty voxels; fall through.
     },
-    &TreeBody::Branch { ref data, ref branches } => {
-      match data {
-        &Some(ref voxel) => {
+    &tree::Inner::Branches(ref branches) => {
+      match branches.data {
+        Some(ref voxel) => {
           if let Some(r) = act(bounds, voxel) {
             return Ok(r)
           }
         },
-        &None => {
+        None => {
           let mid = bounds.center();
 
           let mut make_bounds = |coords: [usize; 3]| {
