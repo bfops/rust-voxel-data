@@ -162,6 +162,22 @@ impl<Voxel> Inner<Voxel> {
   }
 
   #[allow(missing_docs)]
+  pub fn voxel(&self) -> Option<&Voxel> {
+    match self {
+      &Inner::Branches(ref branches) => branches.data.as_ref(),
+      &Inner::Empty => None,
+    }
+  }
+
+  #[allow(missing_docs)]
+  pub fn voxel_mut(&mut self) -> Option<&mut Voxel> {
+    match self {
+      &mut Inner::Branches(ref mut branches) => branches.data.as_mut(),
+      &mut Inner::Empty => None,
+    }
+  }
+
+  #[allow(missing_docs)]
   pub fn brush<Material, Mosaic, Generate, OnVoxelUpdate>(
     &mut self,
     bounds: &bounds::T,
@@ -447,7 +463,7 @@ impl<Voxel> T<Voxel> {
     }
 
     match self.find(voxel, T::<Voxel>::get_step) {
-      Ok(&Inner::Branches(ref branches)) => branches.data.as_ref(),
+      Ok(branch) => branch.voxel(),
       _ => None,
     }
   }
@@ -475,7 +491,7 @@ impl<Voxel> T<Voxel> {
     };
 
     match self.find_mut(voxel, get_step) {
-      Ok(&mut Inner::Branches(ref mut branches)) => branches.data.as_mut(),
+      Ok(branch) => branch.voxel_mut(),
       _ => None,
     }
   }
