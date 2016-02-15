@@ -67,6 +67,20 @@ impl<Voxel> Branches<Voxel> {
   }
 
   #[allow(missing_docs)]
+  pub fn as_flat_array(&self) -> &[TreeBody<Voxel>; 8] {
+    unsafe {
+      mem::transmute(self)
+    }
+  }
+
+  #[allow(missing_docs)]
+  pub fn as_flat_array_mut(&mut self) -> &mut [TreeBody<Voxel>; 8] {
+    unsafe {
+      mem::transmute(self)
+    }
+  }
+
+  #[allow(missing_docs)]
   pub fn as_array(&self) -> &[[[TreeBody<Voxel>; 2]; 2]; 2] {
     unsafe {
       mem::transmute(self)
@@ -207,15 +221,15 @@ impl<Voxel> TreeBody<Voxel> {
   }
 }
 
-impl<Voxel> T<Voxel> {
-  #[allow(missing_docs)]
-  pub fn new() -> T<Voxel> {
-    T {
-      lg_size: 0,
-      contents: Branches::<Voxel>::empty(),
-    }
+#[allow(missing_docs)]
+pub fn new<Voxel>() -> T<Voxel> {
+  T {
+    lg_size: 0,
+    contents: Branches::<Voxel>::empty(),
   }
+}
 
+impl<Voxel> T<Voxel> {
   /// Is this voxel (non-strictly) within an origin-centered voxel with
   /// width `2^(lg_size + 1)`?
   pub fn contains_bounds(&self, voxel: &bounds::T) -> bool {
@@ -397,6 +411,15 @@ impl<Voxel> T<Voxel> {
     }
   }
 
+  fn get_step(
+    branch: &TreeBody<Voxel>,
+  ) -> Result<&Branches<Voxel>, ()> {
+    match branch {
+      &TreeBody::Branch { ref branches, data: _ } => Ok(branches.deref()),
+      _ => Err(()),
+    }
+  }
+
   /// Find a voxel inside this tree.
   /// If it doesn't exist, it will be created as empty.
   #[inline(never)]
@@ -433,17 +456,19 @@ impl<Voxel> T<Voxel> {
       return None
     }
 
-    let get_step = |branch| {
-      match branch {
-        &TreeBody::Branch { ref branches, data: _ } => Ok(branches.deref()),
-        _ => Err(()),
-      }
-    };
-
-    match self.find(voxel, get_step) {
+    match self.find(voxel, T::<Voxel>::get_step) {
       Ok(&TreeBody::Branch { ref data, branches: _ }) => data.as_ref(),
       _ => None,
     }
+  }
+
+  #[allow(missing_docs)]
+  pub fn get_pointer<'a>(&'a self, voxel: &bounds::T) -> Option<&'a TreeBody<Voxel>> {
+    if !self.contains_bounds(voxel) {
+      return None
+    }
+
+    self.find(voxel, T::<Voxel>::get_step).ok()
   }
 
   /// Find a voxel inside this tree.
@@ -463,6 +488,22 @@ impl<Voxel> T<Voxel> {
       Ok(&mut TreeBody::Branch { ref mut data, branches: _ }) => data.as_mut(),
       _ => None,
     }
+  }
+
+  /// Find a voxel inside this tree.
+  pub fn get_mut_pointer<'a>(&'a mut self, voxel: &bounds::T) -> Option<&'a mut TreeBody<Voxel>> {
+    if !self.contains_bounds(voxel) {
+      return None
+    }
+
+    let get_step = |branch| {
+      match branch {
+        &mut TreeBody::Branch { ref mut branches, data: _ } => Ok(branches.deref_mut()),
+        _ => Err(()),
+      }
+    };
+
+    self.find_mut(voxel, get_step).ok()
   }
 
   /// Cast a ray through the contents of this tree.
@@ -607,7 +648,7 @@ mod tests {
 
   #[test]
   fn insert_and_lookup() {
-    let mut tree: T<i32> = T::<i32>::new();
+    let mut tree: T<i32> = super::new();
     *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = TreeBody::leaf(Some(1));
     *tree.get_mut_or_create(&bounds::new(8, -8, 4, 0)) = TreeBody::leaf(Some(2));
     *tree.get_mut_or_create(&bounds::new(2, 0, 4, 4)) = TreeBody::leaf(Some(3));
@@ -624,7 +665,7 @@ mod tests {
 
   #[test]
   fn wrong_voxel_size_is_not_found() {
-    let mut tree: T<i32> = T::<i32>::new();
+    let mut tree: T<i32> = super::new();
     *tree.get_mut_or_create(&bounds::new(4, 4, -4, 1)) = TreeBody::leaf(Some(1));
     assert_eq!(tree.get(&bounds::new(4, 4, -4, 0)), None);
     assert_eq!(tree.get(&bounds::new(4, 4, -4, 2)), None);
@@ -632,7 +673,7 @@ mod tests {
 
   #[test]
   fn grow_is_transparent() {
-    let mut tree: T<i32> = T::<i32>::new();
+    let mut tree: T<i32> = super::new();
     *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = TreeBody::leaf(Some(1));
     tree.grow_to_hold(&bounds::new(0, 0, 0, 1));
     tree.grow_to_hold(&bounds::new(0, 0, 0, 2));
@@ -643,7 +684,7 @@ mod tests {
 
   #[test]
   fn simple_cast_ray() {
-    let mut tree: T<i32> = T::<i32>::new();
+    let mut tree: T<i32> = super::new();
     *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = TreeBody::leaf(Some(1));
     *tree.get_mut_or_create(&bounds::new(4, 4, 4, 0)) = TreeBody::leaf(Some(2));
 
@@ -658,7 +699,7 @@ mod tests {
 
   #[test]
   fn simple_remove() {
-    let mut tree: T<i32> = T::new();
+    let mut tree: T<i32> = super::new();
     *tree.get_mut_or_create(&bounds::new(9, -1, 3, 0)) = TreeBody::leaf(Some(1));
 
     tree.brush(
@@ -680,7 +721,7 @@ mod tests {
 
   #[bench]
   fn simple_inserts(bencher: &mut test::Bencher) {
-    let mut tree: T<i32> = T::<i32>::new();
+    let mut tree: T<i32> = super::new();
     tree.grow_to_hold(&bounds::new(0, 0, 0, 30));
     bencher.iter(|| {
       *tree.get_mut_or_create(&bounds::new(0, 0, 0, 0)) = TreeBody::leaf(Some(0));
@@ -690,7 +731,7 @@ mod tests {
 
   #[bench]
   fn bench_cast_ray(bencher: &mut test::Bencher) {
-    let mut tree: T<i32> = T::<i32>::new();
+    let mut tree: T<i32> = super::new();
     tree.grow_to_hold(&bounds::new(0, 0, 0, 30));
     *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = TreeBody::leaf(Some(1));
     *tree.get_mut_or_create(&bounds::new(4, 4, 4, 0)) = TreeBody::leaf(Some(2));
