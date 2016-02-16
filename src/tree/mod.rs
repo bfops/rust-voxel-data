@@ -1,10 +1,10 @@
 //! Voxel octree
 
 use cgmath::{Aabb, Point, Vector, Vector3, Ray3};
-use std::mem;
-use std::ops::{Deref, DerefMut};
+use std;
 
 mod raycast;
+pub mod traversal;
 
 use brush;
 use bounds;
@@ -67,28 +67,28 @@ impl<Voxel> Branches<Voxel> {
   #[allow(missing_docs)]
   pub fn as_flat_array(&self) -> &[Inner<Voxel>; 8] {
     unsafe {
-      mem::transmute(&self.lll)
+      std::mem::transmute(&self.lll)
     }
   }
 
   #[allow(missing_docs)]
   pub fn as_flat_array_mut(&mut self) -> &mut [Inner<Voxel>; 8] {
     unsafe {
-      mem::transmute(&mut self.lll)
+      std::mem::transmute(&mut self.lll)
     }
   }
 
   #[allow(missing_docs)]
   pub fn as_array(&self) -> &[[[Inner<Voxel>; 2]; 2]; 2] {
     unsafe {
-      mem::transmute(&self.lll)
+      std::mem::transmute(&self.lll)
     }
   }
 
   #[allow(missing_docs)]
   pub fn as_array_mut(&mut self) -> &mut [[[Inner<Voxel>; 2]; 2]; 2] {
     unsafe {
-      mem::transmute(&mut self.lll)
+      std::mem::transmute(&mut self.lll)
     }
   }
 }
@@ -287,7 +287,7 @@ impl<Voxel> T<Voxel> {
       self.lg_size += 1;
 
       // Pull out `self.contents` so we can move out of it.
-      let contents = mem::replace(&mut self.contents, Branches::<Voxel>::empty());
+      let contents = std::mem::replace(&mut self.contents, Branches::<Voxel>::empty());
 
       // We re-construct the tree with bounds twice the size (but still centered
       // around the origin) by deconstructing the top level of branches,
@@ -333,116 +333,14 @@ impl<Voxel> T<Voxel> {
     }
   }
 
-  fn find_mask(&self, voxel: &bounds::T) -> i32 {
-    // When we compare the voxel position to octree bounds to choose subtrees
-    // for insertion, we'll be comparing voxel position to values of 2^n and
-    // -2^n, so we can just use the position bits to branch directly.
-    // This actually works for negative values too, without much wrestling:
-    // we need to branch on the sign bit up front, but after that, two's
-    // complement magic means the branching on bits works regardless of sign.
-
-    let mut mask = (1 << self.lg_size) >> 1;
-
-    // Shift everything by the voxel's lg_size, so we can compare the mask to 0
-    // to know whether we're done.
-    if voxel.lg_size >= 0 {
-      mask = mask >> voxel.lg_size;
-    } else {
-      // TODO: Check for overflow.
-      mask = mask << -voxel.lg_size;
-    }
-
-    mask
-  }
-
-  fn find_mut<'a, Step, E>(
-    &'a mut self,
-    voxel: &bounds::T,
-    mut step: Step,
-  ) -> Result<&'a mut Inner<Voxel>, E> where
-    Step: FnMut(&'a mut Inner<Voxel>) -> Result<&'a mut Branches<Voxel>, E>,
-  {
-    let mut mask = self.find_mask(voxel);
-    let mut branches = &mut self.contents;
-
-    macro_rules! iter(
-      ($select:expr, $step:block) => {{
-        let branches_temp = branches;
-        let branch =
-          &mut branches_temp.as_array_mut()
-            [$select(voxel.x)]
-            [$select(voxel.y)]
-            [$select(voxel.z)]
-          ;
-
-        $step;
-        // We've reached the voxel.
-        if mask == 0 {
-          return Ok(branch)
-        }
-
-        branches = try!(step(branch));
-      }}
-    );
-
-    iter!(|x| (x >= 0) as usize, {});
-
-    loop {
-      iter!(
-        |x| ((x & mask) != 0) as usize,
-        // Branch through half this size next time.
-        { mask = mask >> 1; }
-      );
-    }
-  }
-
-  fn find<'a, Step, E>(
-    &'a self,
-    voxel: &bounds::T,
-    mut step: Step,
-  ) -> Result<&'a Inner<Voxel>, E> where
-    Step: FnMut(&'a Inner<Voxel>) -> Result<&'a Branches<Voxel>, E>,
-  {
-    let mut mask = self.find_mask(voxel);
-    let mut branches = &self.contents;
-
-    macro_rules! iter(
-      ($select:expr, $step:block) => {{
-        let branches_temp = branches;
-        let branch =
-          &branches_temp.as_array()
-            [$select(voxel.x)]
-            [$select(voxel.y)]
-            [$select(voxel.z)]
-          ;
-
-        $step;
-        // We've reached the voxel.
-        if mask == 0 {
-          return Ok(branch)
-        }
-
-        branches = try!(step(branch));
-      }}
-    );
-
-    iter!(|x| (x >= 0) as usize, {});
-
-    loop {
-      iter!(
-        |x| { ((x & mask) != 0) as usize },
-        // Branch through half this size next time.
-        { mask = mask >> 1; }
-      );
-    }
-  }
-
-  fn get_step(
-    branch: &Inner<Voxel>,
-  ) -> Result<&Branches<Voxel>, ()> {
-    match branch {
-      &Inner::Branches(ref branches) => Ok(branches.deref()),
-      _ => Err(()),
+  fn get_mut_or_create_inner<'a>(traversal: &mut traversal::ToVoxelMut, tree: &'a mut Branches<Voxel>) -> &'a mut Inner<Voxel> {
+    match traversal.next(tree) {
+      traversal::Step::Step(new_tree) => {
+        Self::get_mut_or_create_inner(traversal, new_tree.force_branches())
+      },
+      traversal::Step::Last(branch) => {
+        branch
+      },
     }
   }
 
@@ -451,9 +349,9 @@ impl<Voxel> T<Voxel> {
   #[inline(never)]
   pub fn get_mut_or_create<'a>(&'a mut self, voxel: &bounds::T) -> &'a mut Inner<Voxel> {
     self.grow_to_hold(voxel);
-    let branch: Result<_, ()> =
-      self.find_mut(voxel, |branch| { Ok(Inner::<Voxel>::force_branches(branch)) });
-    branch.unwrap()
+
+    let mut traversal = traversal::to_voxel_mut(self, voxel);
+    Self::get_mut_or_create_inner(&mut traversal, &mut self.contents)
   }
 
   /// Find a voxel inside this tree.
@@ -462,9 +360,9 @@ impl<Voxel> T<Voxel> {
       return None
     }
 
-    match self.find(voxel, T::<Voxel>::get_step) {
-      Ok(branch) => branch.voxel(),
-      _ => None,
+    match traversal::to_voxel(self, voxel).last(&self.contents) {
+      None => None,
+      Some(branch) => branch.voxel(),
     }
   }
 
@@ -474,7 +372,7 @@ impl<Voxel> T<Voxel> {
       return None
     }
 
-    self.find(voxel, T::<Voxel>::get_step).ok()
+    traversal::to_voxel(self, voxel).last(&self.contents)
   }
 
   /// Find a voxel inside this tree.
@@ -483,16 +381,9 @@ impl<Voxel> T<Voxel> {
       return None
     }
 
-    let get_step = |branch| {
-      match branch {
-        &mut Inner::Branches(ref mut branches) => Ok(branches.deref_mut()),
-        &mut Inner::Empty => Err(()),
-      }
-    };
-
-    match self.find_mut(voxel, get_step) {
-      Ok(branch) => branch.voxel_mut(),
-      _ => None,
+    match traversal::to_voxel_mut(self, voxel).last(&mut self.contents) {
+      None => None,
+      Some(branch) => branch.voxel_mut(),
     }
   }
 
@@ -502,14 +393,7 @@ impl<Voxel> T<Voxel> {
       return None
     }
 
-    let get_step = |branch| {
-      match branch {
-        &mut Inner::Branches(ref mut branches) => Ok(branches.deref_mut()),
-        _ => Err(()),
-      }
-    };
-
-    self.find_mut(voxel, get_step).ok()
+    traversal::to_voxel_mut(self, voxel).last(&mut self.contents)
   }
 
   /// Cast a ray through the contents of this tree.
