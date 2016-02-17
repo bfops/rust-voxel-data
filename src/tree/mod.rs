@@ -15,10 +15,10 @@ use mosaic;
 pub struct T<Voxel> {
   /// The tree extends 2^lg_size in each direction.
   /// i.e. the total width is 2^(lg_size + 1).
-  lg_size: u8,
+  pub lg_size: u8,
   /// Force the top level to always be branches;
   /// it saves a branch in the grow logic.
-  contents: Branches<Voxel>,
+  pub contents: Branches<Voxel>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
