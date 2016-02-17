@@ -86,12 +86,17 @@ impl ToVoxelMut {
 
   pub fn last<'a, Voxel>(
     &mut self,
-    tree: &'a mut ::tree::Branches<Voxel>,
+    mut tree: &'a mut ::tree::Branches<Voxel>,
   ) -> Option<&'a mut ::tree::Inner<Voxel>> {
-    match self.next(tree) {
-      Step::Last(x) => Some(x),
-      Step::Step(&mut ::tree::Inner::Empty) => None,
-      Step::Step(&mut ::tree::Inner::Branches(ref mut tree)) => self.last(tree),
+    loop {
+      let old_tree = tree;
+      match self.next(old_tree) {
+        Step::Last(x) => return Some(x),
+        Step::Step(&mut ::tree::Inner::Empty) => return None,
+        Step::Step(&mut ::tree::Inner::Branches(ref mut new_tree)) => {
+          tree = new_tree;
+        }
+      }
     }
   }
 }
@@ -139,12 +144,16 @@ impl ToVoxel {
 
   pub fn last<'a, Voxel>(
     &mut self,
-    tree: &'a ::tree::Branches<Voxel>,
+    mut tree: &'a ::tree::Branches<Voxel>,
   ) -> Option<&'a ::tree::Inner<Voxel>> {
-    match self.next(tree) {
-      Step::Last(x) => Some(x),
-      Step::Step(&::tree::Inner::Empty) => None,
-      Step::Step(&::tree::Inner::Branches(ref tree)) => self.last(tree),
+    loop {
+      match self.next(tree) {
+        Step::Last(x) => return Some(x),
+        Step::Step(&::tree::Inner::Empty) => return None,
+        Step::Step(&::tree::Inner::Branches(ref new_tree)) => {
+          tree = new_tree;
+        },
+      }
     }
   }
 }

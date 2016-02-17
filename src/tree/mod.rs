@@ -333,17 +333,6 @@ impl<Voxel> T<Voxel> {
     }
   }
 
-  fn get_mut_or_create_inner<'a>(traversal: &mut traversal::ToVoxelMut, tree: &'a mut Branches<Voxel>) -> &'a mut Inner<Voxel> {
-    match traversal.next(tree) {
-      traversal::Step::Step(new_tree) => {
-        Self::get_mut_or_create_inner(traversal, new_tree.force_branches())
-      },
-      traversal::Step::Last(branch) => {
-        branch
-      },
-    }
-  }
-
   /// Find a voxel inside this tree.
   /// If it doesn't exist, it will be created as empty.
   #[inline(never)]
@@ -351,7 +340,18 @@ impl<Voxel> T<Voxel> {
     self.grow_to_hold(voxel);
 
     let mut traversal = traversal::to_voxel_mut(self, voxel);
-    Self::get_mut_or_create_inner(&mut traversal, &mut self.contents)
+    let mut tree = &mut self.contents;
+    loop {
+      let old_tree = tree;
+      match traversal.next(old_tree) {
+        traversal::Step::Step(new_tree) => {
+          tree = new_tree.force_branches();
+        },
+        traversal::Step::Last(branch) => {
+          return branch
+        },
+      }
+    }
   }
 
   /// Find a voxel inside this tree.
