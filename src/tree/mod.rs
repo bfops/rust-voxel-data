@@ -181,7 +181,7 @@ impl<Voxel> Inner<Voxel> {
   pub fn brush<Material, Mosaic, Generate, OnVoxelUpdate>(
     &mut self,
     bounds: &bounds::T,
-    brush: &brush::T<Mosaic>,
+    brush: &mut brush::T<Mosaic>,
     generate: &mut Generate,
     on_voxel_update: &mut OnVoxelUpdate,
   ) where
@@ -439,7 +439,7 @@ impl<Voxel> T<Voxel> {
   /// Apply a voxel brush to the contents of this tree.
   pub fn brush<Material, Mosaic, Generate, OnVoxelUpdate>(
     &mut self,
-    brush: &brush::T<Mosaic>,
+    brush: &mut brush::T<Mosaic>,
     generate: &mut Generate,
     on_voxel_update: &mut OnVoxelUpdate,
   ) where
@@ -483,17 +483,17 @@ mod tests {
   struct EraseAll;
 
   impl field::T for EraseAll {
-    fn density(&self, _: &Point3<f32>) -> f32 {
+    fn density(&mut self, _: &Point3<f32>) -> f32 {
       1.0
     }
 
-    fn normal(&self, _: &Point3<f32>) -> Vector3<f32> {
+    fn normal(&mut self, _: &Point3<f32>) -> Vector3<f32> {
       Vector3::new(0.0, 0.0, 0.0)
     }
   }
 
   impl mosaic::T<()> for EraseAll {
-    fn material(&self, _: &Point3<f32>) -> Option<()> {
+    fn material(&mut self, _: &Point3<f32>) -> Option<()> {
       None
     }
   }
@@ -502,7 +502,7 @@ mod tests {
     fn brush<Mosaic>(
       this: &mut Self,
       _: &bounds::T,
-      _: &brush::T<Mosaic>,
+      _: &mut brush::T<Mosaic>,
     ) where Mosaic: mosaic::T<()>
     {
       *this = 999;
@@ -594,7 +594,7 @@ mod tests {
     *tree.get_mut_or_create(&bounds::new(9, -1, 3, 0)) = Inner::leaf(Some(1));
 
     tree.brush(
-      &brush::T {
+      &mut brush::T {
         mosaic: EraseAll,
         bounds:
           brush::Bounds::new(

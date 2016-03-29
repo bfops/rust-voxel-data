@@ -36,6 +36,6 @@ pub trait T<Material> {
   fn brush<Mosaic>(
     this: &mut Self,
     bounds: &bounds::T,
-    brush: &brush::T<Mosaic>,
+    brush: &mut brush::T<Mosaic>,
   ) where Mosaic: mosaic::T<Material>;
 }

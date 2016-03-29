@@ -13,25 +13,25 @@ pub struct T<Mosaic> {
 }
 
 impl<Mosaic> field::T for T<Mosaic> where Mosaic: field::T {
-  fn density(&self, p: &Point3<f32>) -> f32 {
+  fn density(&mut self, p: &Point3<f32>) -> f32 {
     let p = p.add_v(&-self.translation);
-    field::T::density(&self.mosaic, &p)
+    field::T::density(&mut self.mosaic, &p)
   }
 
-  fn normal(&self, p: &Point3<f32>) -> Vector3<f32> {
+  fn normal(&mut self, p: &Point3<f32>) -> Vector3<f32> {
     let p = p.add_v(&-self.translation);
-    field::T::normal(&self.mosaic, &p)
+    field::T::normal(&mut self.mosaic, &p)
   }
 }
 
 impl<Mosaic, Material> mosaic::T<Material> for T<Mosaic> where Mosaic: mosaic::T<Material> {
-  fn density(&self, p: &Point3<f32>) -> f32 {
+  fn density(&mut self, p: &Point3<f32>) -> f32 {
     let p = p.add_v(&-self.translation);
-    mosaic::T::density(&self.mosaic, &p)
+    mosaic::T::density(&mut self.mosaic, &p)
   }
 
-  fn material(&self, p: &Point3<f32>) -> Option<Material> {
+  fn material(&mut self, p: &Point3<f32>) -> Option<Material> {
     let p = p.add_v(&-self.translation);
-    mosaic::T::material(&self.mosaic, &p)
+    mosaic::T::material(&mut self.mosaic, &p)
   }
 }

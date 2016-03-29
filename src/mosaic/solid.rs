@@ -15,20 +15,20 @@ pub struct T<Material, Field> {
 unsafe impl<Material, Field> Send for T<Material, Field> where Field: Send {}
 
 impl<Material, Field> field::T for T<Material, Field> where Field: field::T {
-  fn density(&self, p: &Point3<f32>) -> f32 {
-    field::T::density(&self.field, p)
+  fn density(&mut self, p: &Point3<f32>) -> f32 {
+    field::T::density(&mut self.field, p)
   }
 
-  fn normal(&self, p: &Point3<f32>) -> Vector3<f32> {
-    field::T::normal(&self.field, p)
+  fn normal(&mut self, p: &Point3<f32>) -> Vector3<f32> {
+    field::T::normal(&mut self.field, p)
   }
 }
 
-impl<Material, Field> mosaic::T<Material> for T<Material, Field> where 
+impl<Material, Field> mosaic::T<Material> for T<Material, Field> where
   Field: field::T,
   Material: Clone,
 {
-  fn material(&self, p: &Point3<f32>) -> Option<Material> {
+  fn material(&mut self, p: &Point3<f32>) -> Option<Material> {
     if field::T::density(self, p) >= 0.0 {
       Some(self.material.clone())
     } else {

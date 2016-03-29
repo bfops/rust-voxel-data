@@ -12,13 +12,13 @@ pub struct T<Field> {
 }
 
 impl<Field> field::T for T<Field> where Field: field::T {
-  fn density(&self, p: &Point3<f32>) -> f32 {
+  fn density(&mut self, p: &Point3<f32>) -> f32 {
     let p = p.add_v(&-self.translation);
-    field::T::density(&self.field, &p)
+    field::T::density(&mut self.field, &p)
   }
 
-  fn normal(&self, p: &Point3<f32>) -> Vector3<f32> {
+  fn normal(&mut self, p: &Point3<f32>) -> Vector3<f32> {
     let p = p.add_v(&-self.translation);
-    field::T::normal(&self.field, &p)
+    field::T::normal(&mut self.field, &p)
   }
 }

@@ -19,11 +19,11 @@ pub fn new<Field1, Field2>(field1: Field1, field2: Field2) -> T
 }
 
 impl field::T for T {
-  fn density(&self, p: &Point3<f32>) -> f32 {
+  fn density(&mut self, p: &Point3<f32>) -> f32 {
     f32::min(self.0[0].density(p), self.0[1].density(p))
   }
 
-  fn normal(&self, p: &Point3<f32>) -> Vector3<f32> {
+  fn normal(&mut self, p: &Point3<f32>) -> Vector3<f32> {
     let d1 = self.0[0].density(p);
     let d2 = self.0[1].density(p);
     if d1 < d2 {

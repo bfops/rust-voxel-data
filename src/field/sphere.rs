@@ -13,11 +13,11 @@ pub struct T {
 unsafe impl Send for T {}
 
 impl field::T for T {
-  fn density(&self, p: &Point3<f32>) -> f32 {
+  fn density(&mut self, p: &Point3<f32>) -> f32 {
     self.radius*self.radius - p.to_vec().length2()
   }
 
-  fn normal(&self, p: &Point3<f32>) -> Vector3<f32> {
+  fn normal(&mut self, p: &Point3<f32>) -> Vector3<f32> {
     p.to_vec().normalize()
   }
 }

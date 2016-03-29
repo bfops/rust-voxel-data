@@ -45,7 +45,7 @@ pub struct SurfaceStruct<Material> {
 /// Create a voxel by sampling a field.
 // TODO: Should this be moved into the general voxel interface?
 pub fn of_field<Material, Mosaic>(
-  field: &Mosaic,
+  field: &mut Mosaic,
   voxel: &bounds::T,
 ) -> T<Option<Material>> where
   Material: Eq + Clone,
@@ -61,23 +61,25 @@ pub fn of_field<Material, Mosaic>(
   // TODO: Re=evaluating the density function is costly. Do it only once for each corner.
 
   let corner = material_at!(low, low, low);
-  let is_homogenous = || {
-    macro_rules! check_corner(($x:expr, $y:expr, $z:expr) => {{
-      let material = material_at!($x, $y, $z);
-      if material != corner {
-        return false
-      }
-    }});
-    check_corner!( low,  low, high);
-    check_corner!( low, high,  low);
-    check_corner!( low, high, high);
-    check_corner!(high,  low,  low);
-    check_corner!(high,  low, high);
-    check_corner!(high, high,  low);
-    check_corner!(high, high, high);
-    true
+  let is_homogenous = {
+    let mut is_homogenous = || {
+      macro_rules! check_corner(($x:expr, $y:expr, $z:expr) => {{
+        let material = material_at!($x, $y, $z);
+        if material != corner {
+          return false
+        }
+      }});
+      check_corner!( low,  low, high);
+      check_corner!( low, high,  low);
+      check_corner!( low, high, high);
+      check_corner!(high,  low,  low);
+      check_corner!(high,  low, high);
+      check_corner!(high, high,  low);
+      check_corner!(high, high, high);
+      true
+    };
+    is_homogenous()
   };
-  let is_homogenous = is_homogenous();
   debug!("is_homogenous: {:?}", is_homogenous);
 
   if is_homogenous {
@@ -98,7 +100,7 @@ pub fn of_field<Material, Mosaic>(
     Vector3::new(corner_coords[$x], corner_coords[$y], corner_coords[$z]).mul_s(corner)
   }});
 
-  let vertex = 
+  let vertex =
     Vector3::new(0.0, 0.0, 0.0)
     .add_v(&weighted!(0, 0, 0))
     .add_v(&weighted!(0, 0, 1))
@@ -150,11 +152,11 @@ impl<Material> ::T<Material> for T<Material> where Material: Eq + Clone {
   fn brush<Mosaic>(
     this: &mut T<Material>,
     bounds: &bounds::T,
-    brush: &brush::T<Mosaic>,
+    brush: &mut brush::T<Mosaic>,
   ) where Mosaic: mosaic::T<Material>
   {
-    let set_leaf = |this: &mut T<Material>, corner| {
-      match of_field(&brush.mosaic, bounds) {
+    let mut set_leaf = |this: &mut T<Material>, corner| {
+      match of_field(&mut brush.mosaic, bounds) {
         T::Volume(None) => {}
         T::Volume(Some(material)) => {
           *this = T::Volume(material);
@@ -164,7 +166,7 @@ impl<Material> ::T<Material> for T<Material> where Material: Eq + Clone {
           let low = Point3::new(bounds.x as f32, bounds.y as f32, bounds.z as f32);
           let low = low.mul_s(size);
           let corner =
-            match mosaic::T::material(&brush.mosaic, &low) {
+            match mosaic::T::material(&mut brush.mosaic, &low) {
               None => corner,
               Some(material) => material,
             };
