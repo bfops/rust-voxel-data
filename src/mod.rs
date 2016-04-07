@@ -6,6 +6,8 @@
 #![allow(unneeded_field_pattern)]
 #![allow(cyclomatic_complexity)]
 #![allow(option_map_unwrap_or)]
+#![allow(doc_markdown)]
+
 #![deny(missing_docs)]
 #![deny(warnings)]
 
