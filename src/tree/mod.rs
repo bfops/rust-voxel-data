@@ -471,6 +471,7 @@ impl<Voxel> T<Voxel> {
 mod tests {
   extern crate test;
 
+  use std;
   use cgmath::{Ray3, Vector3, Point3};
 
   use super::{T, Branches, Inner};
@@ -616,6 +617,15 @@ mod tests {
     tree.grow_to_hold(&bounds::new(0, 0, 0, 30));
     bencher.iter(|| {
       *tree.get_mut_or_create(&bounds::new(0, 0, 0, 0)) = Inner::leaf(Some(0));
+    });
+    test::black_box(tree);
+  }
+
+  #[bench]
+  fn simple_inserts_hashmap(bencher: &mut test::Bencher) {
+    let mut tree = std::collections::HashMap::new();
+    bencher.iter(|| {
+      tree.insert(bounds::new(0, 0, 0, 0), Some(0));
     });
     test::black_box(tree);
   }
