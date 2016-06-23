@@ -613,21 +613,25 @@ mod tests {
 
   #[bench]
   fn simple_inserts(bencher: &mut test::Bencher) {
-    let mut tree: T<i32> = super::new();
-    tree.grow_to_hold(&bounds::new(0, 0, 0, 30));
     bencher.iter(|| {
-      *tree.get_mut_or_create(&bounds::new(0, 0, 0, 0)) = Inner::leaf(Some(0));
+      let mut tree: T<i32> = super::new();
+      tree.grow_to_hold(&bounds::new(0, 0, 0, 30));
+      for i in 0..1000 {
+        *tree.get_mut_or_create(&bounds::new(i, i, i, 0)) = Inner::leaf(Some(i));
+      }
+      test::black_box(tree);
     });
-    test::black_box(tree);
   }
 
   #[bench]
   fn simple_inserts_hashmap(bencher: &mut test::Bencher) {
-    let mut tree = std::collections::HashMap::new();
     bencher.iter(|| {
-      tree.insert(bounds::new(0, 0, 0, 0), Some(0));
+      let mut tree = std::collections::HashMap::new();
+      for i in 0..1000 {
+        tree.insert(bounds::new(i, i, i, 0), Some(i));
+      }
+      test::black_box(tree);
     });
-    test::black_box(tree);
   }
 
   #[bench]
