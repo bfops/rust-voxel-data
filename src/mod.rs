@@ -17,6 +17,9 @@
 #![feature(unboxed_closures)]
 
 #![plugin(clippy)]
+#![allow(assign_op_pattern)]
+#![allow(needless_borrow)]
+#![allow(useless_let_if_seq)]
 
 extern crate cgmath;
 #[macro_use]

@@ -1,6 +1,6 @@
 //! Voxel octree
 
-use cgmath::{Aabb, Point, Vector, Vector3, Ray3};
+use cgmath::{Aabb, Vector, Vector3, Ray3};
 use std;
 
 mod raycast;
