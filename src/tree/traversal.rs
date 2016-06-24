@@ -61,7 +61,7 @@ impl ToVoxelMut {
   pub fn next<'a, Voxel>(
     &mut self,
     tree: &'a mut ::tree::Branches<Voxel>,
-  ) -> Step<&'a mut ::tree::Inner<Voxel>> {
+  ) -> Step<&'a mut ::tree::Node<Voxel>> {
     let tree_tmp = tree;
     let branch =
       &mut tree_tmp.as_array_mut()
@@ -87,15 +87,20 @@ impl ToVoxelMut {
   pub fn last<'a, Voxel>(
     &mut self,
     mut tree: &'a mut ::tree::Branches<Voxel>,
-  ) -> Option<&'a mut ::tree::Inner<Voxel>> {
+  ) -> Option<&'a mut ::tree::Node<Voxel>> {
     loop {
       let old_tree = tree;
       match self.next(old_tree) {
         Step::Last(x) => return Some(x),
-        Step::Step(&mut ::tree::Inner::Empty) => return None,
-        Step::Step(&mut ::tree::Inner::Branches(ref mut new_tree)) => {
-          tree = new_tree;
-        }
+        Step::Step(node) => {
+          use ::tree::Inner::*;
+          match node.next {
+            Empty => return None,
+            Branches(ref mut new_tree) => {
+              tree = new_tree;
+            }
+          }
+        },
       }
     }
   }
@@ -119,7 +124,7 @@ impl ToVoxel {
   pub fn next<'a, Voxel>(
     &mut self,
     tree: &'a ::tree::Branches<Voxel>,
-  ) -> Step<&'a ::tree::Inner<Voxel>> {
+  ) -> Step<&'a ::tree::Node<Voxel>> {
     let tree_tmp = tree;
     let branch =
       &tree_tmp.as_array()
@@ -145,13 +150,18 @@ impl ToVoxel {
   pub fn last<'a, Voxel>(
     &mut self,
     mut tree: &'a ::tree::Branches<Voxel>,
-  ) -> Option<&'a ::tree::Inner<Voxel>> {
+  ) -> Option<&'a ::tree::Node<Voxel>> {
     loop {
       match self.next(tree) {
         Step::Last(x) => return Some(x),
-        Step::Step(&::tree::Inner::Empty) => return None,
-        Step::Step(&::tree::Inner::Branches(ref new_tree)) => {
-          tree = new_tree;
+        Step::Step(node) => {
+          use ::tree::Inner::*;
+          match node.next {
+            Empty => return None,
+            ::tree::Inner::Branches(ref new_tree) => {
+              tree = new_tree;
+            },
+          }
         },
       }
     }

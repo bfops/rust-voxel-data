@@ -91,7 +91,7 @@ pub fn cast_ray_branches<'a, Voxel, MakeBounds, Act, R>(
 
 /// Precondition: the ray passes through `this`.
 pub fn cast_ray<'a, Voxel, Act, R>(
-  this: &'a tree::Inner<Voxel>,
+  this: &'a tree::Node<Voxel>,
   ray: &Ray3<f32>,
   bounds: bounds::T,
   entry: Option<Entry>,
@@ -100,52 +100,42 @@ pub fn cast_ray<'a, Voxel, Act, R>(
   where
     Act: FnMut(bounds::T, &'a Voxel) -> Option<R>
 {
-  match this {
-    &tree::Inner::Empty => {
-      // We pass through empty voxels; fall through.
-    },
-    &tree::Inner::Branches(ref branches) => {
-      match branches.data {
-        Some(ref voxel) => {
-          if let Some(r) = act(bounds, voxel) {
-            return Ok(r)
-          }
-        },
-        None => {
-          let mid = bounds.center();
-
-          let mut make_bounds = |coords: [usize; 3]| {
-            let mut bounds = bounds;
-            bounds.lg_size -= 1;
-            bounds.x <<= 1;
-            bounds.y <<= 1;
-            bounds.z <<= 1;
-            bounds.x += coords[0] as i32;
-            bounds.y += coords[1] as i32;
-            bounds.z += coords[2] as i32;
-            bounds
-          };
-
-          let entry_toi = entry.map(|entry| entry.toi.0).unwrap_or(0.0);
-          let intersect = ray.origin.add_v(&ray.direction.mul_s(entry_toi));
-          let coords = [
-            if intersect.x >= mid.x {1} else {0},
-            if intersect.y >= mid.y {1} else {0},
-            if intersect.z >= mid.z {1} else {0},
-          ];
-
-          return cast_ray_branches(
-            branches,
-            ray,
-            entry,
-            coords,
-            &mut make_bounds,
-            act,
-          )
-        },
-      }
+  if let Some(ref voxel) = this.data {
+    if let Some(r) = act(bounds, voxel) {
+      return Ok(r)
     }
-  };
+  } else if let tree::Inner::Branches(ref branches) = this.next {
+    let mid = bounds.center();
+
+    let mut make_bounds = |coords: [usize; 3]| {
+      let mut bounds = bounds;
+      bounds.lg_size -= 1;
+      bounds.x <<= 1;
+      bounds.y <<= 1;
+      bounds.z <<= 1;
+      bounds.x += coords[0] as i32;
+      bounds.y += coords[1] as i32;
+      bounds.z += coords[2] as i32;
+      bounds
+    };
+
+    let entry_toi = entry.map(|entry| entry.toi.0).unwrap_or(0.0);
+    let intersect = ray.origin.add_v(&ray.direction.mul_s(entry_toi));
+    let coords = [
+      if intersect.x >= mid.x {1} else {0},
+      if intersect.y >= mid.y {1} else {0},
+      if intersect.z >= mid.z {1} else {0},
+    ];
+
+    return cast_ray_branches(
+      branches,
+      ray,
+      entry,
+      coords,
+      &mut make_bounds,
+      act,
+    )
+  }
 
   // We pass through this voxel; calculate the exit.
 

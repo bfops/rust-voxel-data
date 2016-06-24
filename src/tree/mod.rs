@@ -24,20 +24,78 @@ pub struct T<Voxel> {
 #[derive(Debug, PartialEq, Eq, RustcEncodable, RustcDecodable)]
 #[allow(missing_docs)]
 #[repr(C)]
+pub struct Node<Voxel> {
+  pub data : Option<Voxel>,
+  pub next : Inner<Voxel>,
+}
+
+impl<Voxel> Node<Voxel> {
+  /// An empty leaf
+  pub fn empty() -> Self {
+    Self::leaf(None)
+  }
+
+  /// Create a tree leaf.
+  pub fn leaf(data: Option<Voxel>) -> Self {
+    Node {
+      data: data,
+      next: Inner::Empty,
+    }
+  }
+
+  #[allow(missing_docs)]
+  pub fn brush<Material, Mosaic, Generate, OnVoxelUpdate>(
+    &mut self,
+    bounds: &bounds::T,
+    brush: &mut brush::T<Mosaic>,
+    generate: &mut Generate,
+    on_voxel_update: &mut OnVoxelUpdate,
+  ) where
+    Mosaic: mosaic::T<Material>,
+    Voxel: ::T<Material>,
+    Generate: FnMut(&::bounds::T) -> Option<Voxel>,
+    OnVoxelUpdate: FnMut(&Voxel, &::bounds::T),
+  {
+    match self.data {
+      None => {
+        match generate(bounds) {
+          None => {},
+          Some(mut voxel) => {
+            ::T::brush(&mut voxel, bounds, brush);
+            on_voxel_update(&voxel, bounds);
+            self.data = Some(voxel);
+          },
+        }
+      },
+      Some(ref mut voxel) => {
+        ::T::brush(voxel, bounds, brush);
+        on_voxel_update(&voxel, bounds);
+      },
+    }
+
+    self.next.brush(bounds, brush, generate, on_voxel_update);
+  }
+
+  /// Return the `Branches` data from this subtree. If none exists, create empty branch data.
+  pub fn force_branches(&mut self) -> &mut Branches<Voxel> {
+    self.next.force_branches()
+  }
+}
+
+#[derive(Debug, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[allow(missing_docs)]
+#[repr(C)]
+// xyz ordering
+// This isn't an array because we can't move out of an array.
 pub struct Branches<Voxel> {
-  pub data: Option<Voxel>,
-
-  // xyz ordering
-  // This isn't an array because we can't move out of an array.
-
-  lll: Inner<Voxel>,
-  llh: Inner<Voxel>,
-  lhl: Inner<Voxel>,
-  lhh: Inner<Voxel>,
-  hll: Inner<Voxel>,
-  hlh: Inner<Voxel>,
-  hhl: Inner<Voxel>,
-  hhh: Inner<Voxel>,
+  lll: Node<Voxel>,
+  llh: Node<Voxel>,
+  lhl: Node<Voxel>,
+  lhh: Node<Voxel>,
+  hll: Node<Voxel>,
+  hlh: Node<Voxel>,
+  hhl: Node<Voxel>,
+  hhh: Node<Voxel>,
 }
 
 /// The main, recursive, tree-y part of the voxel tree.
@@ -52,41 +110,40 @@ impl<Voxel> Branches<Voxel> {
   #[allow(missing_docs)]
   pub fn empty() -> Branches<Voxel> {
     Branches {
-      data: None,
-      lll: Inner::Empty,
-      llh: Inner::Empty,
-      lhl: Inner::Empty,
-      lhh: Inner::Empty,
-      hll: Inner::Empty,
-      hlh: Inner::Empty,
-      hhl: Inner::Empty,
-      hhh: Inner::Empty,
+      lll: Node::empty(),
+      llh: Node::empty(),
+      lhl: Node::empty(),
+      lhh: Node::empty(),
+      hll: Node::empty(),
+      hlh: Node::empty(),
+      hhl: Node::empty(),
+      hhh: Node::empty(),
     }
   }
 
   #[allow(missing_docs)]
-  pub fn as_flat_array(&self) -> &[Inner<Voxel>; 8] {
+  pub fn as_flat_array(&self) -> &[Node<Voxel>; 8] {
     unsafe {
       std::mem::transmute(&self.lll)
     }
   }
 
   #[allow(missing_docs)]
-  pub fn as_flat_array_mut(&mut self) -> &mut [Inner<Voxel>; 8] {
+  pub fn as_flat_array_mut(&mut self) -> &mut [Node<Voxel>; 8] {
     unsafe {
       std::mem::transmute(&mut self.lll)
     }
   }
 
   #[allow(missing_docs)]
-  pub fn as_array(&self) -> &[[[Inner<Voxel>; 2]; 2]; 2] {
+  pub fn as_array(&self) -> &[[[Node<Voxel>; 2]; 2]; 2] {
     unsafe {
       std::mem::transmute(&self.lll)
     }
   }
 
   #[allow(missing_docs)]
-  pub fn as_array_mut(&mut self) -> &mut [[[Inner<Voxel>; 2]; 2]; 2] {
+  pub fn as_array_mut(&mut self) -> &mut [[[Node<Voxel>; 2]; 2]; 2] {
     unsafe {
       std::mem::transmute(&mut self.lll)
     }
@@ -138,42 +195,19 @@ fn brush_overlaps(voxel: &bounds::T, brush: &brush::Bounds) -> bool {
 }
 
 impl<Voxel> Inner<Voxel> {
-  /// Create a tree leaf.
-  pub fn leaf(voxel: Option<Voxel>) -> Inner<Voxel> {
-    let mut branches = Branches::empty();
-    branches.data = voxel;
-    Inner::Branches(Box::new(branches))
-  }
-
   /// Return the `Branches` data from this subtree. If none exists, create empty branch data.
   pub fn force_branches(&mut self) -> &mut Branches<Voxel> {
     match self {
       &mut Inner::Branches(ref mut branches) => branches,
 
       &mut Inner::Empty => {
-        *self = Self::leaf(None);
+        *self = Inner::Branches(Box::new(Branches::empty()));
 
         match self {
           &mut Inner::Branches(ref mut branches) => branches,
           _ => unreachable!(),
         }
       },
-    }
-  }
-
-  #[allow(missing_docs)]
-  pub fn voxel(&self) -> Option<&Voxel> {
-    match self {
-      &Inner::Branches(ref branches) => branches.data.as_ref(),
-      &Inner::Empty => None,
-    }
-  }
-
-  #[allow(missing_docs)]
-  pub fn voxel_mut(&mut self) -> Option<&mut Voxel> {
-    match self {
-      &mut Inner::Branches(ref mut branches) => branches.data.as_mut(),
-      &mut Inner::Empty => None,
     }
   }
 
@@ -201,23 +235,6 @@ impl<Voxel> Inner<Voxel> {
     }
 
     let mut on_branches = |branches: &mut Box<Branches<Voxel>>| {
-      match branches.data {
-        None => {
-          match generate(bounds) {
-            None => {},
-            Some(mut voxel) => {
-              ::T::brush(&mut voxel, bounds, brush);
-              on_voxel_update(&voxel, bounds);
-              branches.data = Some(voxel);
-            },
-          }
-        },
-        Some(ref mut voxel) => {
-          ::T::brush(voxel, bounds, brush);
-          on_voxel_update(&voxel, bounds);
-        },
-      }
-
       // Bounds of the lowest branch
       let bounds = bounds::new(bounds.x << 1, bounds.y << 1, bounds.z << 1, bounds.lg_size - 1);
 
@@ -314,13 +331,15 @@ impl<Voxel> T<Voxel> {
         ($c_idx:ident, $b_idx:ident) => {{
           let mut branches = Branches::<Voxel>::empty();
           branches.$b_idx = contents.$c_idx;
-          Inner::Branches(Box::new(branches))
+          Node {
+            data : None,
+            next : Inner::Branches(Box::new(branches)),
+          }
         }}
       );
 
       self.contents =
         Branches {
-          data: None,
           lll: at!(lll, hhh),
           llh: at!(llh, hhl),
           lhl: at!(lhl, hlh),
@@ -336,7 +355,7 @@ impl<Voxel> T<Voxel> {
   /// Find a voxel inside this tree.
   /// If it doesn't exist, it will be created as empty.
   #[inline(never)]
-  pub fn get_mut_or_create<'a>(&'a mut self, voxel: &bounds::T) -> &'a mut Inner<Voxel> {
+  pub fn get_mut_or_create<'a>(&'a mut self, voxel: &bounds::T) -> &'a mut Node<Voxel> {
     self.grow_to_hold(voxel);
 
     let mut traversal = traversal::to_voxel_mut(self, voxel);
@@ -362,12 +381,12 @@ impl<Voxel> T<Voxel> {
 
     match traversal::to_voxel(self, voxel).last(&self.contents) {
       None => None,
-      Some(branch) => branch.voxel(),
+      Some(branch) => branch.data.as_ref(),
     }
   }
 
   #[allow(missing_docs)]
-  pub fn get_pointer<'a>(&'a self, voxel: &bounds::T) -> Option<&'a Inner<Voxel>> {
+  pub fn get_pointer<'a>(&'a self, voxel: &bounds::T) -> Option<&'a Node<Voxel>> {
     if !self.contains_bounds(voxel) {
       return None
     }
@@ -383,12 +402,12 @@ impl<Voxel> T<Voxel> {
 
     match traversal::to_voxel_mut(self, voxel).last(&mut self.contents) {
       None => None,
-      Some(branch) => branch.voxel_mut(),
+      Some(branch) => branch.data.as_mut(),
     }
   }
 
   /// Find a voxel inside this tree.
-  pub fn get_mut_pointer<'a>(&'a mut self, voxel: &bounds::T) -> Option<&'a mut Inner<Voxel>> {
+  pub fn get_mut_pointer<'a>(&'a mut self, voxel: &bounds::T) -> Option<&'a mut Node<Voxel>> {
     if !self.contains_bounds(voxel) {
       return None
     }
@@ -474,7 +493,7 @@ mod tests {
   use std;
   use cgmath::{Ray3, Vector3, Point3};
 
-  use super::{T, Branches, Inner};
+  use super::*;
   use bounds;
   use brush;
   use field;
@@ -515,17 +534,17 @@ mod tests {
     let tree: T<i32> =
       T {
         lg_size: 0,
-        contents: Branches {
-          data: None,
-          lll: Inner::leaf(Some(0)),
-          llh: Inner::leaf(Some(1)),
-          lhl: Inner::leaf(Some(2)),
-          lhh: Inner::leaf(Some(3)),
-          hll: Inner::leaf(Some(4)),
-          hlh: Inner::leaf(Some(5)),
-          hhl: Inner::leaf(Some(6)),
-          hhh: Inner::leaf(Some(7)),
-        },
+        contents:
+          Branches {
+            lll: Node::leaf(Some(0)),
+            llh: Node::leaf(Some(1)),
+            lhl: Node::leaf(Some(2)),
+            lhh: Node::leaf(Some(3)),
+            hll: Node::leaf(Some(4)),
+            hlh: Node::leaf(Some(5)),
+            hhl: Node::leaf(Some(6)),
+            hhh: Node::leaf(Some(7)),
+          },
       };
 
     assert_eq!(tree.get(&bounds::new(-1, -1, -1, 0)), Some(&0));
@@ -541,11 +560,11 @@ mod tests {
   #[test]
   fn insert_and_lookup() {
     let mut tree: T<i32> = super::new();
-    *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = Inner::leaf(Some(1));
-    *tree.get_mut_or_create(&bounds::new(8, -8, 4, 0)) = Inner::leaf(Some(2));
-    *tree.get_mut_or_create(&bounds::new(2, 0, 4, 4)) = Inner::leaf(Some(3));
-    *tree.get_mut_or_create(&bounds::new(9, 0, 16, 2)) = Inner::leaf(Some(4));
-    *tree.get_mut_or_create(&bounds::new(9, 0, 16, 2)) = Inner::leaf(Some(5));
+    *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = Node::leaf(Some(1));
+    *tree.get_mut_or_create(&bounds::new(8, -8, 4, 0)) = Node::leaf(Some(2));
+    *tree.get_mut_or_create(&bounds::new(2, 0, 4, 4)) = Node::leaf(Some(3));
+    *tree.get_mut_or_create(&bounds::new(9, 0, 16, 2)) = Node::leaf(Some(4));
+    *tree.get_mut_or_create(&bounds::new(9, 0, 16, 2)) = Node::leaf(Some(5));
 
     assert_eq!(tree.get(&bounds::new(1, 1, 1, 0)), Some(&1));
     assert_eq!(tree.get(&bounds::new(8, -8, 4, 0)), Some(&2));
@@ -558,7 +577,7 @@ mod tests {
   #[test]
   fn wrong_voxel_size_is_not_found() {
     let mut tree: T<i32> = super::new();
-    *tree.get_mut_or_create(&bounds::new(4, 4, -4, 1)) = Inner::leaf(Some(1));
+    *tree.get_mut_or_create(&bounds::new(4, 4, -4, 1)) = Node::leaf(Some(1));
     assert_eq!(tree.get(&bounds::new(4, 4, -4, 0)), None);
     assert_eq!(tree.get(&bounds::new(4, 4, -4, 2)), None);
   }
@@ -566,7 +585,7 @@ mod tests {
   #[test]
   fn grow_is_transparent() {
     let mut tree: T<i32> = super::new();
-    *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = Inner::leaf(Some(1));
+    *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = Node::leaf(Some(1));
     tree.grow_to_hold(&bounds::new(0, 0, 0, 1));
     tree.grow_to_hold(&bounds::new(0, 0, 0, 2));
     tree.grow_to_hold(&bounds::new(-32, 32, -128, 3));
@@ -577,8 +596,8 @@ mod tests {
   #[test]
   fn simple_cast_ray() {
     let mut tree: T<i32> = super::new();
-    *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = Inner::leaf(Some(1));
-    *tree.get_mut_or_create(&bounds::new(4, 4, 4, 0)) = Inner::leaf(Some(2));
+    *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = Node::leaf(Some(1));
+    *tree.get_mut_or_create(&bounds::new(4, 4, 4, 0)) = Node::leaf(Some(2));
 
     let actual = tree.cast_ray(
       &Ray3::new(Point3::new(4.5, 3.0, 4.5), Vector3::new(0.1, 0.8, 0.1)),
@@ -592,7 +611,7 @@ mod tests {
   #[test]
   fn simple_remove() {
     let mut tree: T<i32> = super::new();
-    *tree.get_mut_or_create(&bounds::new(9, -1, 3, 0)) = Inner::leaf(Some(1));
+    *tree.get_mut_or_create(&bounds::new(9, -1, 3, 0)) = Node::leaf(Some(1));
 
     tree.brush(
       &mut brush::T {
@@ -617,7 +636,7 @@ mod tests {
       let mut tree: T<i32> = super::new();
       tree.grow_to_hold(&bounds::new(0, 0, 0, 30));
       for i in 0..1000 {
-        *tree.get_mut_or_create(&bounds::new(i, i, i, 0)) = Inner::leaf(Some(i));
+        *tree.get_mut_or_create(&bounds::new(i, i, i, 0)) = Node::leaf(Some(i));
       }
       test::black_box(tree);
     });
@@ -638,8 +657,8 @@ mod tests {
   fn bench_cast_ray(bencher: &mut test::Bencher) {
     let mut tree: T<i32> = super::new();
     tree.grow_to_hold(&bounds::new(0, 0, 0, 30));
-    *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = Inner::leaf(Some(1));
-    *tree.get_mut_or_create(&bounds::new(4, 4, 4, 0)) = Inner::leaf(Some(2));
+    *tree.get_mut_or_create(&bounds::new(1, 1, 1, 0)) = Node::leaf(Some(1));
+    *tree.get_mut_or_create(&bounds::new(4, 4, 4, 0)) = Node::leaf(Some(2));
 
     bencher.iter(|| {
       let r = tree.cast_ray(
