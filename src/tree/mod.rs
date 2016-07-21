@@ -21,7 +21,7 @@ pub struct T<Voxel> {
   pub contents: Branches<Voxel>,
 }
 
-#[derive(Debug, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
 #[allow(missing_docs)]
 #[repr(C)]
 pub struct Node<Voxel> {
@@ -82,7 +82,7 @@ impl<Voxel> Node<Voxel> {
   }
 }
 
-#[derive(Debug, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
 #[allow(missing_docs)]
 #[repr(C)]
 // xyz ordering
@@ -99,7 +99,7 @@ pub struct Branches<Voxel> {
 }
 
 /// The main, recursive, tree-y part of the voxel tree.
-#[derive(Debug, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
 #[allow(missing_docs)]
 pub enum Inner<Voxel> {
   Empty,
