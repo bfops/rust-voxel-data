@@ -1,6 +1,6 @@
 //! Voxel brush module
 
-use cgmath::Aabb3;
+use collision::Aabb3;
 
 #[allow(missing_docs)]
 pub type Bounds = Aabb3<i32>;

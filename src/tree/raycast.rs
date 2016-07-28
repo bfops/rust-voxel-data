@@ -1,4 +1,4 @@
-use cgmath::{Point, Vector, Ray3};
+use collision::{Ray3};
 use std::cmp::Ordering;
 
 use bounds;
@@ -120,7 +120,7 @@ pub fn cast_ray<'a, Voxel, Act, R>(
     };
 
     let entry_toi = entry.map(|entry| entry.toi.0).unwrap_or(0.0);
-    let intersect = ray.origin.add_v(&ray.direction.mul_s(entry_toi));
+    let intersect = ray.origin + ray.direction * entry_toi;
     let coords = [
       if intersect.x >= mid.x {1} else {0},
       if intersect.y >= mid.y {1} else {0},

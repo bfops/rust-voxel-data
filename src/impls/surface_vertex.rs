@@ -1,6 +1,6 @@
 //! A voxel implementation where each voxel stores a single mesh vertex and normal.
 
-use cgmath::{Point, Point3, Vector, EuclideanVector, Vector3};
+use cgmath::{Point3, Vector3, EuclideanSpace, InnerSpace};
 use std::cmp::{min, max};
 use std::f32;
 use std::ops::Neg;
@@ -97,22 +97,22 @@ pub fn of_field<Material, Mosaic>(
     assert!(corner >= 0.0);
     let corner = 1.0 / (corner + f32::EPSILON);
     total_weight += corner;
-    Vector3::new(corner_coords[$x], corner_coords[$y], corner_coords[$z]).mul_s(corner)
+    Vector3::new(corner_coords[$x], corner_coords[$y], corner_coords[$z]) * corner
   }});
 
   let vertex =
     Vector3::new(0.0, 0.0, 0.0)
-    .add_v(&weighted!(0, 0, 0))
-    .add_v(&weighted!(0, 0, 1))
-    .add_v(&weighted!(0, 1, 0))
-    .add_v(&weighted!(0, 1, 1))
-    .add_v(&weighted!(1, 0, 0))
-    .add_v(&weighted!(1, 0, 1))
-    .add_v(&weighted!(1, 1, 0))
-    .add_v(&weighted!(1, 1, 1))
+    + weighted!(0, 0, 0)
+    + weighted!(0, 0, 1)
+    + weighted!(0, 1, 0)
+    + weighted!(0, 1, 1)
+    + weighted!(1, 0, 0)
+    + weighted!(1, 0, 1)
+    + weighted!(1, 1, 0)
+    + weighted!(1, 1, 1)
   ;
 
-  let vertex = Point3::from_vec(&vertex.div_s(total_weight));
+  let vertex = Point3::from_vec(&vertex / total_weight);
   let vertex =
     Vertex {
       x: Fracu8::of(f32::min(vertex.x, 255.0) as u8),
@@ -164,7 +164,7 @@ impl<Material> ::T<Material> for T<Material> where Material: Eq + Clone {
         T::Surface(surface) => {
           let size = bounds.size();
           let low = Point3::new(bounds.x as f32, bounds.y as f32, bounds.z as f32);
-          let low = low.mul_s(size);
+          let low = low * size;
           let corner =
             match mosaic::T::material(&mut brush.mosaic, &low) {
               None => corner,
@@ -211,10 +211,10 @@ impl Vertex {
         self.y.numerator as f32,
         self.z.numerator as f32,
       )
-      .div_s(256.0)
+      / 256.0
     ;
     let fparent = Point3::new(parent.x as f32, parent.y as f32, parent.z as f32);
-    fparent.add_v(&local).mul_s(parent.size())
+    (fparent + local) * parent.size()
   }
 }
 
@@ -235,7 +235,7 @@ impl Normal {
     // fraction in [-1,1). That seems wrong, but this is normal data, so scaling
     // doesn't matter. Sketch factor is over 9000, but it's not wrong.
 
-    let normal = normal.mul_s(127.0);
+    let normal = normal * 127.0;
     let normal = Vector3::new(normal.x as i32, normal.y as i32, normal.z as i32);
     Normal {
       x: Fraci8::of(max(-127, min(127, normal.x)) as i8),

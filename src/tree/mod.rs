@@ -1,6 +1,7 @@
 //! Voxel octree
 
-use cgmath::{Aabb, Vector, Vector3, Ray3};
+use collision::{Aabb, Ray3};
+use cgmath::{Vector3, ElementWise};
 use std;
 
 mod raycast;
@@ -162,7 +163,7 @@ fn brush_overlaps(voxel: &bounds::T, brush: &brush::Bounds) -> bool {
     min.y < brush.max().y &&
     min.z < brush.max().z &&
     {
-      let max = min.add_s(1 << voxel.lg_size);
+      let max = min.add_element_wise(1 << voxel.lg_size);
       brush.min().x < max.x &&
       brush.min().y < max.y &&
       brush.min().z < max.z &&
@@ -491,7 +492,8 @@ mod tests {
   extern crate test;
 
   use std;
-  use cgmath::{Ray3, Vector3, Point3};
+  use collision::Ray3;
+  use cgmath::{Vector3, Point3};
 
   use super::*;
   use bounds;

@@ -22,6 +22,7 @@
 #![allow(useless_let_if_seq)]
 
 extern crate cgmath;
+extern crate collision;
 #[macro_use]
 extern crate log;
 extern crate rustc_serialize;

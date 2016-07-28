@@ -1,6 +1,6 @@
 //! Voxel bounds
 
-use cgmath::{Point, Point3, Vector3};
+use cgmath::{Point3, Vector3};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, RustcEncodable, RustcDecodable)]
 #[allow(missing_docs)]
@@ -41,15 +41,15 @@ impl T {
   #[inline]
   pub fn low_corner(&self) -> Point3<f32> {
     let size = self.size();
-    Point3::new(self.x as f32, self.y as f32, self.z as f32).mul_s(size)
+    Point3::new(self.x as f32, self.y as f32, self.z as f32) * size
   }
 
   /// The corners of this voxel.
   #[inline]
   pub fn corners(&self) -> (Point3<f32>, Point3<f32>) {
     let size = self.size();
-    let low = Point3::new(self.x as f32, self.y as f32, self.z as f32).mul_s(size);
-    (low, low.add_v(&Vector3::new(size, size, size)))
+    let low = Point3::new(self.x as f32, self.y as f32, self.z as f32) * size;
+    (low, low + Vector3::new(size, size, size))
   }
 
   /// The center of this voxel.
@@ -57,7 +57,7 @@ impl T {
   pub fn center(&self) -> Point3<f32> {
     let size = self.size();
     let half = Vector3::new(0.5, 0.5, 0.5);
-    Point3::new(self.x as f32, self.y as f32, self.z as f32).add_v(&half).mul_s(size)
+    (Point3::new(self.x as f32, self.y as f32, self.z as f32) + half) * size
   }
 
   /// Check whether this voxel contains a given point.

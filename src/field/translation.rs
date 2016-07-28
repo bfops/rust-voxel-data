@@ -1,6 +1,6 @@
 //! A field defined by a translation of another field.
 
-use cgmath::{Point, Point3, Vector3};
+use cgmath::{Point3, Vector3};
 
 use field;
 
@@ -13,12 +13,12 @@ pub struct T<Field> {
 
 impl<Field> field::T for T<Field> where Field: field::T {
   fn density(&mut self, p: &Point3<f32>) -> f32 {
-    let p = p.add_v(&-self.translation);
+    let p = p + -self.translation;
     field::T::density(&mut self.field, &p)
   }
 
   fn normal(&mut self, p: &Point3<f32>) -> Vector3<f32> {
-    let p = p.add_v(&-self.translation);
+    let p = p + -self.translation;
     field::T::normal(&mut self.field, &p)
   }
 }
