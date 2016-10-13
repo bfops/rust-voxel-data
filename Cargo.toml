@@ -11,7 +11,7 @@ name = "voxel_data"
 path = "./src/mod.rs"
 
 [dependencies]
-cgmath = "0.10.*"
+cgmath = "0.12.*"
 clippy = "*"
 collision = "*"
 log = "*"

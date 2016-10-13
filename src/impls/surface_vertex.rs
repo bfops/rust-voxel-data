@@ -100,17 +100,15 @@ pub fn of_field<Material, Mosaic>(
     Vector3::new(corner_coords[$x], corner_coords[$y], corner_coords[$z]) * corner
   }});
 
-  let vertex =
-    Vector3::new(0.0, 0.0, 0.0)
-    + weighted!(0, 0, 0)
-    + weighted!(0, 0, 1)
-    + weighted!(0, 1, 0)
-    + weighted!(0, 1, 1)
-    + weighted!(1, 0, 0)
-    + weighted!(1, 0, 1)
-    + weighted!(1, 1, 0)
-    + weighted!(1, 1, 1)
-  ;
+  let mut vertex = Vector3::new(0.0, 0.0, 0.0);
+  vertex += weighted!(0, 0, 0);
+  vertex += weighted!(0, 0, 1);
+  vertex += weighted!(0, 1, 0);
+  vertex += weighted!(0, 1, 1);
+  vertex += weighted!(1, 0, 0);
+  vertex += weighted!(1, 0, 1);
+  vertex += weighted!(1, 1, 0);
+  vertex += weighted!(1, 1, 1);
 
   let vertex = Point3::from_vec(&vertex / total_weight);
   let vertex =
