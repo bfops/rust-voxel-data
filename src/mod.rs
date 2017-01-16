@@ -1,25 +1,11 @@
 //! This crate defines voxel data types and interfaces for interacting with voxels.
 
-#![allow(let_and_return)]
-#![allow(match_ref_pats)]
-#![allow(type_complexity)]
-#![allow(unneeded_field_pattern)]
-#![allow(cyclomatic_complexity)]
-#![allow(option_map_unwrap_or)]
-#![allow(doc_markdown)]
-
 #![deny(missing_docs)]
 #![deny(warnings)]
 
 #![feature(main)]
-#![feature(plugin)]
 #![feature(test)]
 #![feature(unboxed_closures)]
-
-#![plugin(clippy)]
-#![allow(assign_op_pattern)]
-#![allow(needless_borrow)]
-#![allow(useless_let_if_seq)]
 
 extern crate cgmath;
 extern crate collision;

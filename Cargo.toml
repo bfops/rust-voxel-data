@@ -12,7 +12,6 @@ path = "./src/mod.rs"
 
 [dependencies]
 cgmath = "0.12.*"
-clippy = "*"
 collision = "*"
 log = "*"
 rustc-serialize = "*"

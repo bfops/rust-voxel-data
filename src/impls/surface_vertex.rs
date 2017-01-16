@@ -41,7 +41,6 @@ pub struct SurfaceStruct<Material> {
   pub corner: Material,
 }
 
-#[allow(eq_op)]
 /// Create a voxel by sampling a field.
 // TODO: Should this be moved into the general voxel interface?
 pub fn of_field<Material, Mosaic>(
