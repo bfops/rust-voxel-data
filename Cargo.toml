@@ -12,6 +12,6 @@ path = "./src/mod.rs"
 
 [dependencies]
 cgmath = "0.12.*"
-collision = "*"
+collision = "0.10.*"
 log = "*"
 rustc-serialize = "*"
