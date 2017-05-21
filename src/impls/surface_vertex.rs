@@ -16,7 +16,7 @@ use mosaic;
 // "flattening" the leaf contents and pointers into the same space (the
 // low-order bits can be used to figure out which one it is, since pointers
 // have three low-order bits set to zero).
-#[derive(Debug, Copy, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum T<Material> {
   /// The entire voxel is a single material.
@@ -25,7 +25,7 @@ pub enum T<Material> {
   Surface(SurfaceStruct<Material>),
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 // Every voxel keeps track of a single vertex, as well as whether its
 // lowest-coordinate corner is inside the volume.
 // Since we keep track of an "arbitrarily" large world of voxels, we don't
@@ -189,7 +189,7 @@ impl<Material> ::T<Material> for T<Material> where Material: Eq + Clone {
   }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 /// Vertex expressed using a fraction between voxel bounds.
 pub struct Vertex {
@@ -215,7 +215,7 @@ impl Vertex {
   }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 /// A compressed normal format.
 pub struct Normal {
@@ -260,7 +260,7 @@ impl Neg for Normal {
 }
 
 /// Express a `[0,1)` fraction using a `u8`.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Fracu8 {
   /// The numerator of a fraction over 1 << 8.
   pub numerator: u8,
@@ -276,7 +276,7 @@ impl Fracu8 {
 }
 
 /// Express a `[-1,1)` fraction using a `i8`.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Fraci8 {
   /// The numerator of a fraction over 1 << 8.
   pub numerator: i8,

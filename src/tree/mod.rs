@@ -11,7 +11,7 @@ use brush;
 use bounds;
 use mosaic;
 
-#[derive(Debug, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Serialize, Deserialize)]
 /// A voxel octree; a voxel stored at a given level is the size of the entire subtree.
 pub struct T<Voxel> {
   /// The tree extends 2^lg_size in each direction.
@@ -22,7 +22,7 @@ pub struct T<Voxel> {
   pub contents: Branches<Voxel>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 #[repr(C)]
 pub struct Node<Voxel> {
@@ -83,7 +83,7 @@ impl<Voxel> Node<Voxel> {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 #[repr(C)]
 // xyz ordering
@@ -100,7 +100,7 @@ pub struct Branches<Voxel> {
 }
 
 /// The main, recursive, tree-y part of the voxel tree.
-#[derive(Debug, Clone, PartialEq, Eq, RustcEncodable, RustcDecodable)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum Inner<Voxel> {
   Empty,

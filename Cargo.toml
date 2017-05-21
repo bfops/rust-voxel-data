@@ -11,7 +11,8 @@ name = "voxel_data"
 path = "./src/mod.rs"
 
 [dependencies]
-cgmath = "0.12.*"
-collision = "0.10.*"
-log = "*"
-rustc-serialize = "*"
+cgmath         = "0.14.*"
+collision      = "0.10.*"
+serde          = "*"
+serde_derive   = "*"
+log            = "*"
