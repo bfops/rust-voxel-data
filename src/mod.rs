@@ -3,9 +3,7 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-#![feature(main)]
-#![feature(test)]
-#![feature(unboxed_closures)]
+#![cfg_attr(test, feature(test))]
 
 extern crate cgmath;
 extern crate collision;
@@ -14,6 +12,7 @@ extern crate log;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+#[cfg(test)]
 extern crate test;
 
 pub mod bounds;
