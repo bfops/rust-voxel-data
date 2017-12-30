@@ -3,6 +3,8 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
+#![cfg_attr(test, feature(test))]
+
 extern crate cgmath;
 extern crate collision;
 #[macro_use]
@@ -10,6 +12,8 @@ extern crate log;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+#[cfg(test)]
+extern crate test;
 
 pub mod bounds;
 pub mod brush;
